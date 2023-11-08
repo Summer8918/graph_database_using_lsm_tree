@@ -9,7 +9,7 @@ using namespace std;
 
 class InitGraphFile {
 public:
-    InitGraphFile(char *fileName, uint chukSize_) {
+    InitGraphFile(char *fileName) {
         fName = fileName;
         inputFile.open(fileName, ios::in | ios::binary | ios::ate);
         if (!inputFile.is_open()) {
@@ -41,11 +41,6 @@ public:
         }
     }
 private:
-    uint pos;
-    uint offset;
     char * fName;
-    uint chunkSize;
-    char *buffer;
     std::ifstream inputFile;
-    long end;
 };
