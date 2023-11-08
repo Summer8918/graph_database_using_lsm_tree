@@ -12,5 +12,9 @@ all: db_test
 
 vertex.o: vertex.h
 
+utils.o: utils.h
+
+graph.o: graph.h
+
 clean:
 	$(RM) *.o db_test
