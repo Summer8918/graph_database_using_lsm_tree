@@ -10,6 +10,12 @@ using namespace std;
 struct node {
     uint id;
     uint offset;
+    uint outDegree;
+    node () {
+        id = 0;
+        offset = 0;
+        outDegree = 0;
+    }
 };
 
 class subGraph {
@@ -48,6 +54,20 @@ public:
         return length;
     }
 
+    void setOutDegree(void) {
+        uint sz = vertexes.size(), szo = outNeighbors.size();
+        for (int i = 0; i < sz - 1; i++) {
+            vertexes[i].outDegree = vertexes[i+1].offset - vertexes[i].offset;
+        }
+        //cout << "sz:" << sz << " vertexes[sz - 2].offset" << vertexes[sz - 2].offset << endl;
+        if (sz >= 2) {
+            vertexes[sz - 1].outDegree = szo - vertexes[sz - 1].offset;
+        } else if (sz == 1) {
+            vertexes[sz - 1].outDegree = szo;
+        }
+        //cout << "vertexes[sz - 1].outDegree " << vertexes[sz - 1].outDegree << endl;
+    }
+
     void clearSubgraph(void) {
         length = 0;
         vertexes.clear();
@@ -57,10 +77,11 @@ public:
     void printSubgraph(void) {
         //cout << "vertexes array size:" << vertexes.size() << endl;
         for (node &n : vertexes) {
-            cout << "id:" << n.id << " offset:" << n.offset << endl;
+            cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
+                    << n.outDegree << endl;
         }
         
-        cout << "outNeighbors array:" << endl;
+        cout << "outNeighbors array size:" << outNeighbors.size() << endl;
         for (auto &o : outNeighbors) {
             cout << o << " ";
         }

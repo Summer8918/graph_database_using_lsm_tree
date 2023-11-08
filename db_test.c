@@ -13,6 +13,7 @@ int main() {
     while (initGraphFile.getLine(a, b)) {
         int sgLen = sg.addEdge(a, b);
         if (sgLen >= MAX_SUB_GRAPH_SIZE) {
+            sg.setOutDegree();
             sg.printSubgraph();
             sg.clearSubgraph();
         }
