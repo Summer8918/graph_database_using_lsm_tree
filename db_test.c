@@ -8,13 +8,8 @@ int main() {
 
     /* Code to test clas initGraphFile begin*/
     InitGraphFile initGraphFile("partOfsocLiveJournal1.txt", 1024);
-    long len = initGraphFile.readChunk();
-    int i = 0;
-    while (len > 0) {
-        char * b = initGraphFile.getBuffer();
-        cout << "i:" << i << " read length:" << len << endl;
-        len = initGraphFile.readChunk();
-        i += 1;
+    uint a, b;
+    while (initGraphFile.getLine(a, b)) {
     }
     /* Code to test clas initGraphFile end*/
 
