@@ -12,7 +12,7 @@ using namespace std;
 typedef unsigned int uintE;
 typedef unsigned int uintT;
 
-// Suppose the graph is unweighted and asummetric
+// Suppose the graph is unweighted, asymmetric and directional.
 struct asymmetricVertex {
     uintE* inNeighbors;
     uintE* outNeighbors;

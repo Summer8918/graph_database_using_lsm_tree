@@ -43,6 +43,7 @@ public:
         if (inputFile.is_open()) {
             inputFile.close();
         }
+        free(buffer);
     }
 private:
     uint offset;
