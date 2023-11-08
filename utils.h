@@ -3,4 +3,5 @@
 typedef unsigned int uintE;
 typedef unsigned int uintT;
 
-#define MAX_SUB_GRAPH_SIZE 1024 - 8
+#define MAX_ARRAYS_SIZE 1024 - 16
+#define MAX_SUB_GRAPH_STRUCT_SIZE 1024

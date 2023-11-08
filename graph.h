@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <cstring>
 #include <stdlib.h>
 #include "utils.h"
 
@@ -22,10 +23,12 @@ class subGraph {
 public:
     subGraph() {
         length = 0;
+        buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
     }
 
     ~subGraph() {
         clearSubgraph();
+        free(buf);
     }
 
     int getLenght() {
@@ -88,11 +91,83 @@ public:
         cout << endl;
     }
 
-    // TODO:
-    void flushSubgraphToDisk();
+    void serialize() {
+        char *ptr = buf;
+        memcpy(ptr, &length, sizeof(length));
+        ptr += sizeof(length);
+        memcpy(ptr, &vertexesSize, sizeof(vertexesSize));
+        ptr += sizeof(vertexesSize);
+        memcpy(ptr, &outNeighborsSize, sizeof(outNeighborsSize));
+        ptr += sizeof(outNeighborsSize);
+        for (int i = 0; i < vertexesSize; i++) {
+            memcpy(ptr, &vertexes[i], sizeof(vertexes[i]));
+            ptr += sizeof(vertexes[i]);
+        }
+        for (int i = 0; i < outNeighborsSize; i++) {
+            memcpy(ptr, &outNeighbors[i], sizeof(outNeighbors[i]));
+            ptr += sizeof(outNeighbors[i]);
+        }
+    }
+
+    void deserialize(string fileName) {
+        std::ifstream* filePtr = new std::ifstream(fileName, std::ios::binary);
+        if (!filePtr->is_open()) {
+            std::cout << "Unable to open file:" << fileName << std::endl;
+            abort();
+        }
+        filePtr->seekg(0, std::ios::end);
+        std::streampos fileSize = filePtr->tellg();
+        int len = (int)fileSize;
+        if (len > MAX_SUB_GRAPH_STRUCT_SIZE) {
+            std::cout << "length of file:" << fileName << "is " << len <<\
+                    " , it is larger than buffer"<< std::endl;
+            //abort();
+        }
+        filePtr->seekg(0, std::ios::beg);
+        filePtr->read(buf, min(len, MAX_SUB_GRAPH_STRUCT_SIZE));
+        char *ptr = buf;
+        memcpy(&length, ptr, sizeof(length));
+        ptr += sizeof(length);
+        memcpy(&vertexesSize, ptr, sizeof(vertexesSize));
+        ptr += sizeof(vertexesSize);
+        memcpy(&outNeighborsSize, ptr, sizeof(outNeighborsSize));
+        ptr += sizeof(outNeighborsSize);
+        vertexes.resize(vertexesSize);
+        outNeighbors.resize(outNeighborsSize);
+        for (int i = 0; i < vertexesSize; i++) {
+            memcpy(&vertexes[i], ptr, sizeof(vertexes[i]));
+            ptr += sizeof(vertexes[i]);
+        }
+        for (int i = 0; i < outNeighborsSize; i++) {
+            memcpy(&outNeighbors[i], ptr, sizeof(outNeighbors[i]));
+            ptr += sizeof(outNeighbors[i]);
+        }
+        delete filePtr;
+    }
+
+    bool flushSubgraphToDisk(string fileName) {
+        vertexesSize = vertexes.size();
+        outNeighborsSize = outNeighbors.size();
+        serialize();
+        std::ofstream outputFile(fileName, std::ios::app | std::ios::binary);
+        if (!outputFile.is_open()) {
+            std::cout << "Unable to open file:" << fileName << std::endl;
+            abort();
+        }
+        cout << "write file length is:" << length + sizeof(vertexesSize) \
+                + sizeof(outNeighborsSize) << endl;
+        outputFile.write(buf, length + sizeof(vertexesSize) + sizeof(outNeighborsSize));
+        outputFile.flush();
+        outputFile.close();
+        return true;
+    }
+
 private:
 int length;
+char *buf;
+int vertexesSize;
 vector<node> vertexes;
+int outNeighborsSize;
 vector<int> outNeighbors;
 };
 
