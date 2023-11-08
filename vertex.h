@@ -6,11 +6,11 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include "utils.h"
 
 using namespace std;
 
-typedef unsigned int uintE;
-typedef unsigned int uintT;
+
 
 // Suppose the graph is unweighted, asymmetric and directional.
 struct asymmetricVertex {
