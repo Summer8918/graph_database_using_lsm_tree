@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstring>
 #include <stdlib.h>
+#include <vector>
 #include "utils.h"
 
 using namespace std;
@@ -22,7 +23,7 @@ struct node {
 class subGraph {
 public:
     subGraph() {
-        length = 0;
+        totalLen = 0;
         buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
     }
 
@@ -32,7 +33,7 @@ public:
     }
 
     int getLenght() {
-        return length;
+        return totalLen;
     }
 
     int addEdge(uint a, uint b) {
@@ -44,17 +45,17 @@ public:
                 vertexes.push_back(backNode);
             }
             outNeighbors.push_back(b);
-            length += sizeof(b);
         } else {
             node tmp;
             tmp.id = a;
             outNeighbors.push_back(b);
             tmp.offset = 0;
             vertexes.push_back(tmp);
-            length += sizeof(a) * 2;
         }
-        //cout << "length:" << length << endl;
-        return length;
+        totalLen = sizeof(totalLen) + sizeof(vertexesSize) + sizeof(outNeighborsSize) +\
+                vertexes.size() * sizeof(node) + outNeighbors.size() * sizeof(int);
+        //cout << "totalLen:" << totalLen << endl;
+        return totalLen;
     }
 
     void setOutDegree(void) {
@@ -72,7 +73,7 @@ public:
     }
 
     void clearSubgraph(void) {
-        length = 0;
+        totalLen = sizeof(outNeighborsSize) + sizeof(vertexesSize);
         vertexes.clear();
         outNeighbors.clear();
     }
@@ -93,17 +94,29 @@ public:
 
     void serialize() {
         char *ptr = buf;
-        memcpy(ptr, &length, sizeof(length));
-        ptr += sizeof(length);
+        if (ptr == NULL) {
+            cout << "ptr is NULL" << endl;
+        } else {
+            //cout << "ptr is valid" << endl;
+        }
+        
+        if (totalLen > MAX_ARRAYS_SIZE) {
+            cout << "error! totalLen " << totalLen << endl;
+        }
+        memcpy(ptr, &totalLen, sizeof(totalLen));
+        ptr += sizeof(totalLen);
         memcpy(ptr, &vertexesSize, sizeof(vertexesSize));
         ptr += sizeof(vertexesSize);
         memcpy(ptr, &outNeighborsSize, sizeof(outNeighborsSize));
         ptr += sizeof(outNeighborsSize);
+        //cout << "outNeighborsSize:" << outNeighborsSize << " vertexesSize:" << vertexesSize << endl;
         for (int i = 0; i < vertexesSize; i++) {
             memcpy(ptr, &vertexes[i], sizeof(vertexes[i]));
+            //cout << "vertexes: i" << i << " " << vertexes[i].id << endl;
             ptr += sizeof(vertexes[i]);
         }
         for (int i = 0; i < outNeighborsSize; i++) {
+            //cout << "outNeighbors: i" << i << " " << outNeighbors[i] << endl;
             memcpy(ptr, &outNeighbors[i], sizeof(outNeighbors[i]));
             ptr += sizeof(outNeighbors[i]);
         }
@@ -126,8 +139,8 @@ public:
         filePtr->seekg(0, std::ios::beg);
         filePtr->read(buf, min(len, MAX_SUB_GRAPH_STRUCT_SIZE));
         char *ptr = buf;
-        memcpy(&length, ptr, sizeof(length));
-        ptr += sizeof(length);
+        memcpy(&totalLen, ptr, sizeof(totalLen));
+        ptr += sizeof(totalLen);
         memcpy(&vertexesSize, ptr, sizeof(vertexesSize));
         ptr += sizeof(vertexesSize);
         memcpy(&outNeighborsSize, ptr, sizeof(outNeighborsSize));
@@ -149,21 +162,26 @@ public:
         vertexesSize = vertexes.size();
         outNeighborsSize = outNeighbors.size();
         serialize();
-        std::ofstream outputFile(fileName, std::ios::app | std::ios::binary);
-        if (!outputFile.is_open()) {
+        std::fstream outputFile;
+        outputFile.open(fileName, ios::out);
+        if (!outputFile) {
             std::cout << "Unable to open file:" << fileName << std::endl;
             abort();
         }
-        cout << "write file length is:" << length + sizeof(vertexesSize) \
-                + sizeof(outNeighborsSize) << endl;
-        outputFile.write(buf, length + sizeof(vertexesSize) + sizeof(outNeighborsSize));
-        outputFile.flush();
-        outputFile.close();
+        cout << "write file length is:" << totalLen << endl;
+        outputFile.write(buf, totalLen);
+        cout << "write file:" << fileName << "success!" << endl;
+        if (!outputFile) {
+            std::cout << "Unable to open file:" << fileName << std::endl;
+            abort();
+        }
+        //outputFile.close();
+        cout << "close file:" << fileName << "success!" << endl;
         return true;
     }
 
 private:
-int length;
+int totalLen;
 char *buf;
 int vertexesSize;
 vector<node> vertexes;
@@ -173,30 +191,75 @@ vector<int> outNeighbors;
 
 class InitGraphFile {
 public:
-    InitGraphFile(char *fileName) {
+    InitGraphFile(const char *fileName) {
         fName = fileName;
         inputFile.open(fileName, ios::in | ios::binary | ios::ate);
         if (!inputFile.is_open()) {
             std::cout << "Unable to open file:" << fileName << std::endl;
             abort();
         }
+        // Move the file pointer to the end of the file
+        inputFile.seekg(0, std::ios::end);
+
+        // Get the file length
+        fileLen = (int)inputFile.tellg();
+        remainLen = fileLen;
+        cout << "fileLen:" << fileLen << endl;
         inputFile.seekg(0, std::ios::beg);
+        buffer = newA(char, READ_INPUT_FILE_BUFFER_SIZE);
+        inputFile.read(buffer, READ_INPUT_FILE_BUFFER_SIZE);
+        pos = 0;
     }
 
     bool getLine(uint &a, uint &b) {
-        string line;
-        while (std::getline(inputFile, line)) {
-            if (line.find('#') != string::npos) {
-                continue;
+        //cout << "getLine" << endl;
+        while (remainLen > 0) {
+            string tmp;
+            while (pos < READ_INPUT_FILE_BUFFER_SIZE && pos < remainLen && buffer[pos] != '\n') {
+                //cout << "buffer[pos]" << buffer[pos] << endl;
+                tmp += buffer[pos];
+                pos++;
             }
-            istringstream iss(line);
-            if (iss >> a >> b) {
-                //cout << "vertex1: " << a << " vertex2: " << b << endl;
-                return true;
+            //cout << "tmp:" << tmp << "pos" << pos << "remainLen" << remainLen << endl;
+            if (pos < READ_INPUT_FILE_BUFFER_SIZE  && pos < remainLen && buffer[pos] == '\n') {
+                if (tmp.find('#') != string::npos) {
+                    pos++;
+                    continue;
+                }
+                istringstream iss(tmp);
+                if (iss >> a >> b) {
+                    //cout << "vertex1: " << a << " vertex2: " << b << endl;
+                    
+                    pos++;
+                    return true;
+                }
+                pos++;
             }
+            int tmpLen = tmp.length();
+            if (pos == READ_INPUT_FILE_BUFFER_SIZE || pos == remainLen) {
+                //cout << "remainLen 1:" << remainLen << endl;
+                if (pos >= remainLen) {
+                    remainLen = 0;
+                } else {
+                    remainLen -= (READ_INPUT_FILE_BUFFER_SIZE - tmpLen);
+                }
+                memcpy(buffer, tmp.c_str(), tmpLen);
+                inputFile.read(buffer + tmpLen, READ_INPUT_FILE_BUFFER_SIZE - tmpLen);
+                pos = 0;
+            }
+            //cout << "remainLen 2:" << remainLen << endl;
         }
-        cout << "return false" << endl;
         return false;
+    }
+
+    bool testReadFile() {
+        int cnt = 0;
+        while (inputFile) {
+            inputFile.read(buffer, READ_INPUT_FILE_BUFFER_SIZE);
+            cout << "cnt:" << cnt << endl;
+            cnt += 1;
+        }
+        return true;
     }
 
     ~InitGraphFile() {
@@ -205,6 +268,10 @@ public:
         }
     }
 private:
-    char * fName;
+    const char * fName;
     std::ifstream inputFile;
+    char *buffer;
+    int pos;
+    int fileLen;
+    int remainLen;
 };
