@@ -5,6 +5,7 @@
 #include <cstring>
 #include <stdlib.h>
 #include <vector>
+#include <cassert>
 #include "utils.h"
 
 using namespace std;
@@ -99,8 +100,8 @@ public:
         } else {
             //cout << "ptr is valid" << endl;
         }
-        
-        if (totalLen > MAX_ARRAYS_SIZE) {
+        assert(totalLen <= MAX_SUB_GRAPH_STRUCT_SIZE);
+        if (totalLen > MAX_SUB_GRAPH_STRUCT_SIZE) {
             cout << "error! totalLen " << totalLen << endl;
         }
         memcpy(ptr, &totalLen, sizeof(totalLen));
@@ -168,15 +169,15 @@ public:
             std::cout << "Unable to open file:" << fileName << std::endl;
             abort();
         }
-        cout << "write file length is:" << totalLen << endl;
+        //cout << "write file length is:" << totalLen << endl;
         outputFile.write(buf, totalLen);
-        cout << "write file:" << fileName << "success!" << endl;
+        //cout << "write file:" << fileName << "success!" << endl;
         if (!outputFile) {
             std::cout << "Unable to open file:" << fileName << std::endl;
             abort();
         }
-        //outputFile.close();
-        cout << "close file:" << fileName << "success!" << endl;
+        outputFile.close();
+        //cout << "close file:" << fileName << "success!" << endl;
         return true;
     }
 

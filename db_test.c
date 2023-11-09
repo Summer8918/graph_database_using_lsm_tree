@@ -1,6 +1,7 @@
 #include "vertex.h"
 #include "graph.h"
 #include <filesystem>
+#include <chrono>
 
 using namespace std;
 
@@ -24,6 +25,7 @@ int main() {
         } else {
             std::cerr << "Failed to delete the existing directory: " << \
                 dirPath << std::endl;
+            abort();
         }
     }
     if (std::filesystem::create_directory(dirPath)) {
@@ -33,6 +35,8 @@ int main() {
         return 1;
     }
 
+    // Record the start time
+    auto startTime = std::chrono::high_resolution_clock::now();
     while (initGraphFile.getLine(a, b)) {
         //cout << "a" << a << " b" << b << endl; 
         int sgLen = sg.addEdge(a, b);
@@ -50,6 +54,15 @@ int main() {
     //sg.printSubgraph();
     sg.flushSubgraphToDisk(dirPath+"/"+to_string(cnt));
     sg.clearSubgraph();
+
+    // Record the end time
+    auto endTime = std::chrono::high_resolution_clock::now();
+    // Calculate the duration in microseconds
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+
+    // Print the duration
+    std::cout << "Time taken by function: " << duration.count() << " microseconds" << std::endl;
+
     cout << "test deserialize" << endl;
     sg.deserialize(dirPath+"/"+to_string(cnt));
 
