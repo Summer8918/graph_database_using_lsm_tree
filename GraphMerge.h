@@ -30,7 +30,7 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
     }
     
     // Update totalLen and other necessary fields for csrGraph
-    csrGraph.totalLen = csrGraph.vertexes.size() * sizeof(node) + csrGraph.outNeighbors.size() * sizeof(uint);
+    csrGraph.totalLen = csrGraph.vertexes.size() * sizeof(node) + csrGraph.outNeighbors.size() * sizeof(uintT);
     csrGraph.vertexesSize = csrGraph.vertexes.size();
     csrGraph.outNeighborsSize = csrGraph.outNeighbors.size();
     
@@ -38,7 +38,7 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
 }
 
 // Merge function for two CSR graphs that handles overlapping vertices
-subGraph mergeGraphs(const Graph& G1, const Graph& G2) {
+subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
     subGraph newGraph;
 
     // Initialize the newGraph with appropriate size.
@@ -87,7 +87,7 @@ subGraph mergeGraphs(const Graph& G1, const Graph& G2) {
     }
 
     // Update the totalLen and other necessary fields for the newGraph
-    newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uint);
+    newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
     // You would also want to update vertexesSize and outNeighborsSize if they are used in the `subGraph` class
     newGraph.vertexesSize = newGraph.vertexes.size();
     newGraph.outNeighborsSize = newGraph.outNeighbors.size();
@@ -95,4 +95,98 @@ subGraph mergeGraphs(const Graph& G1, const Graph& G2) {
     return newGraph;
 }
 
+// Utility function to print CSR graph
+void printCSRGraph(const subGraph& csrGraph) {
+    cout << "CSR Graph:" << endl;
+    cout << "Vertexes (id, offset, outDegree):" << endl;
+    for (const node& n : csrGraph.vertexes) {
+        cout << "(" << n.id << ", " << n.offset << ", " << n.outDegree << ") ";
+    }
+    cout << "\nOutNeighbors:" << endl;
+    for (unsigned int n : csrGraph.outNeighbors) {
+        cout << n << " ";
+    }
+    cout << "\nTotal Length: " << csrGraph.totalLen << endl;
+}
+
+// Test function for GraphMerge.h
+int main() {
+    // Graph edges array.
+    graphEdge edges[] = {
+        // (x, y, w) -> edge from x to y with weight w
+        {0, 1, 2}, {0, 2, 4}, {1, 4, 3}, {2, 3, 2}, {3, 1, 4}, {4, 3, 3}
+    };
+    int numVertices = 6;  // Number of vertices in the graph
+    int numEdges = sizeof(edges) / sizeof(edges[0]);
+
+    // Construct graph
+    DiaGraph diaGraph(edges, numEdges, numVertices);
+
+    // Convert to CSR format
+    subGraph csrGraph = convertToCSR(diaGraph);
+    printCSRGraph(csrGraph);
+
+    // Merge CSR graph with itself and print the result
+    subGraph mergedGraph = mergeGraphs(csrGraph, csrGraph);
+    printCSRGraph(mergedGraph);
+
+    // Check for correctness
+    bool correct = true;
+    for (size_t i = 0; i < csrGraph.vertexes.size(); ++i) {
+        if (mergedGraph.vertexes[i].outDegree != 2 * csrGraph.vertexes[i].outDegree) {
+            correct = false;
+            break;
+        }
+    }
+    cout << "Merge correctness: " << (correct ? "Passed" : "Failed") << endl;
+
+    return 0;
+}
+
 #endif  // GRAPHMERGE_H
+
+
+// Test function for GraphMerge.h
+
+// int main() {
+//     // graph edges array.
+//     graphEdge edges[] = {
+//         // (x, y, w) -> edge from x to y with weight w
+//         {0,1,2},{0,2,4},{1,4,3},{2,3,2},{3,1,4},{4,3,3}
+//     };
+//     int N = 6;      // Number of vertices in the graph
+//     // calculate number of edges
+//     int n = sizeof(edges)/sizeof(edges[0]);
+//     // construct graph
+//     DiaGraph diagraph(edges, n, N);
+//     // print adjacency list representation of graph
+//     cout<<"Graph adjacency list "<<endl<<"(start_vertex, end_vertex, weight):"<<endl;
+//     for (int i = 0; i < N; i++)
+//     {
+//         // display adjacent vertices of vertex i
+//         display_AdjList(diagraph.head[i], i);
+//     }
+//     subGraph csrGraph = convertToCSR(diagraph);
+//     cout << "CSR Graph:" << endl;
+//     for (node &n : csrGraph.vertexes) {
+//         cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
+//                 << n.outDegree << endl;
+//     }
+//     cout << "outNeighbors:" << endl;
+//     for (uint &n : csrGraph.outNeighbors) {
+//         cout << n << " ";
+//     }
+//     cout << endl;
+//     subGraph mergedGraph = mergeGraphs(csrGraph, csrGraph);
+//     cout << "Merged Graph:" << endl;
+//     for (node &n : mergedGraph.vertexes) {
+//         cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
+//                 << n.outDegree << endl;
+//     }
+//     cout << "outNeighbors:" << endl;
+//     for (uint &n : mergedGraph.outNeighbors) {
+//         cout << n << " ";
+//     }
+//     cout << endl;
+//     return 0;
+// }

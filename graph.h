@@ -22,7 +22,14 @@ struct node {
 };
 
 class subGraph {
+
 public:
+int totalLen;
+char *buf;
+int vertexesSize;
+vector<node> vertexes;
+int outNeighborsSize;
+vector<int> outNeighbors;
     subGraph() {
         totalLen = 0;
         buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
@@ -182,12 +189,12 @@ public:
     }
 
 private:
-int totalLen;
-char *buf;
-int vertexesSize;
-vector<node> vertexes;
-int outNeighborsSize;
-vector<int> outNeighbors;
+// int totalLen;
+// char *buf;
+// int vertexesSize;
+// vector<node> vertexes;
+// int outNeighborsSize;
+// vector<int> outNeighbors;
 };
 
 class InitGraphFile {
