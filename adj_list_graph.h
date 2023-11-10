@@ -19,8 +19,9 @@ class DiaGraph{
         newNode->next = head;   // point new node to current head
         return newNode;
     }
-    int N;  // number of nodes in the graph
+    // int N;  // number of nodes in the graph
 public:
+    int N;  // number of nodes in the graph
     adjNode **head;                //adjacency list as array of pointers
     // Constructor
     DiaGraph(graphEdge edges[], int n, int N)  {
