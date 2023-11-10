@@ -10,7 +10,9 @@ CC=g++
 
 all: db_test GraphMerge
 
-GraphMerge: adj_list_graph.h GraphMerge.h
+db_test: db_test.c graph.h vertex.h utils.h
+
+GraphMerge: GraphMerge.c GraphMerge.h adj_list_graph.h
 
 vertex.o: vertex.h
 
@@ -18,9 +20,7 @@ utils.o: utils.h
 
 graph.o: graph.h
 
-GraphMerge.o: GraphMerge.h
-
 adj_list_graph.o: adj_list_graph.h
 
 clean:
-	$(RM) *.o db_test
+	$(RM) *.o db_test GraphMerge
