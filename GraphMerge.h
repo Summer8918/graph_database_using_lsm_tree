@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <vector>
+#include <omp.h>
 
 // Function to convert adjacency list graph to CSR graph
 subGraph convertToCSR(const DiaGraph& adjListGraph) {
@@ -40,60 +41,60 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
 // Merge function for two CSR graphs that handles overlapping vertices
 subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
     subGraph newGraph;
-
-    // Initialize the newGraph with appropriate size.
-    // Note: Depending on the original `graph.h` implementation, you may need to initialize more fields here.
     newGraph.vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
     newGraph.outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
 
-    // Insert all vertices and edges from G1 into newGraph
+    std::unordered_map<uintT, size_t> vertexMapping;
     for (const auto& v : G1.vertexes) {
         newGraph.vertexes.push_back(v);
+        vertexMapping[v.id] = newGraph.vertexes.size() - 1;
+        newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), G1.outNeighbors.begin() + v.offset, G1.outNeighbors.begin() + v.offset + v.outDegree);
     }
-    newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), G1.outNeighbors.begin(), G1.outNeighbors.end());
 
-    // Mapping from G2's vertex id to the index in the newGraph's vertexes
-    std::unordered_map<uintT, size_t> vertexMapping;
-
-    // Append vertices from G2
-    for (const auto& v : G2.vertexes) {
+    // Parallelize the merging of vertices from G2
+    #pragma omp parallel for
+    for (size_t i = 0; i < G2.vertexes.size(); ++i) {
+        const auto& v = G2.vertexes[i];
         auto it = vertexMapping.find(v.id);
         if (it != vertexMapping.end()) {
-            // Vertex already exists in G1, so merge adjacency lists
+            // Handle overlapping vertices
             node& existingNode = newGraph.vertexes[it->second];
-            size_t originalDegree = existingNode.outDegree;
-            existingNode.outDegree += v.outDegree;
             size_t newOffset = newGraph.outNeighbors.size();
-            
-            // Update offset if the node already had neighbors
-            if (originalDegree > 0) {
-                existingNode.offset = newOffset;
+            std::vector<uintT> tempNeighbors;
+            tempNeighbors.reserve(v.outDegree);
+            for (size_t j = 0; j < v.outDegree; ++j) {
+                uintT neighbor = G2.outNeighbors[v.offset + j];
+                tempNeighbors.push_back(neighbor);
             }
-            
-            // Append G2's adjacency list for the vertex to newGraph
-            newGraph.outNeighbors.insert(newGraph.outNeighbors.end(),
-                                         G2.outNeighbors.begin() + v.offset,
-                                         G2.outNeighbors.begin() + v.offset + v.outDegree);
+            #pragma omp critical
+            {
+                newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
+                existingNode.outDegree += tempNeighbors.size();
+                if (existingNode.outDegree > 0) {
+                    existingNode.offset = newOffset;
+                }
+            }
         } else {
-            // Vertex is unique to G2
+            // Handle unique vertices
             node newNode = v;
-            newNode.offset = newGraph.outNeighbors.size(); // Update offset to new position
-            newGraph.vertexes.push_back(newNode);
-            vertexMapping[v.id] = newGraph.vertexes.size() - 1;
-            newGraph.outNeighbors.insert(newGraph.outNeighbors.end(),
-                                         G2.outNeighbors.begin() + v.offset,
-                                         G2.outNeighbors.begin() + v.offset + v.outDegree);
+            newNode.offset = newGraph.outNeighbors.size();
+            std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + v.offset, G2.outNeighbors.begin() + v.offset + v.outDegree);
+            #pragma omp critical
+            {
+                newGraph.vertexes.push_back(newNode);
+                vertexMapping[v.id] = newGraph.vertexes.size() - 1;
+                newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
+            }
         }
     }
 
-    // Update the totalLen and other necessary fields for the newGraph
     newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
-    // You would also want to update vertexesSize and outNeighborsSize if they are used in the `subGraph` class
     newGraph.vertexesSize = newGraph.vertexes.size();
     newGraph.outNeighborsSize = newGraph.outNeighbors.size();
 
     return newGraph;
-};
+}
+
 
 // Utility function to print CSR graph
 void printCSRGraph(const subGraph& csrGraph) {
