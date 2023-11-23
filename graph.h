@@ -28,14 +28,13 @@ struct graphHeader {
 
 class subGraph {
 public:
-int totalLen;
-char *buf;
-vector<node> vertexes;
-graphHeader header;
-vector<int> outNeighbors;
-int edgeNum;
+    char *buf;
+    vector<node> vertexes;
+    graphHeader header;
+    vector<int> outNeighbors;
+    uint64_t edgeNum;
+
     subGraph() {
-        totalLen = 0;
         edgeNum = 0;
         buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
     }
@@ -43,10 +42,6 @@ int edgeNum;
     ~subGraph() {
         clearSubgraph();
         free(buf);
-    }
-
-    int getLenght() {
-        return totalLen;
     }
 
     int addEdge(uint a, uint b) {
@@ -202,6 +197,7 @@ int edgeNum;
             }
         }
         delete filePtr;
+        cout << "Deserialize success" << endl;
     }
 };
 

@@ -10,4 +10,4 @@ typedef unsigned int uintT;
 
 #define READ_INPUT_FILE_BUFFER_SIZE 1024 * 16
 
-#define MAX_EDGE_NUM 1000000000
+#define MAX_EDGE_NUM 1000000000 // 10000000

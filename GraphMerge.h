@@ -87,7 +87,7 @@ subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
         }
     }
 
-    newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
+    //newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
     newGraph.header.vertexNum = newGraph.vertexes.size();
     newGraph.header.outNeighborNum = newGraph.outNeighbors.size();
 
@@ -106,7 +106,7 @@ void printCSRGraph(const subGraph& csrGraph) {
     for (unsigned int n : csrGraph.outNeighbors) {
         cout << n << " ";
     }
-    cout << "\nTotal Length: " << csrGraph.totalLen << endl;
+    //cout << "\nTotal Length: " << csrGraph.totalLen << endl;
 }
 
 #endif  // GRAPHMERGE_H
