@@ -99,16 +99,16 @@ public:
         cout << endl;
     }
 
-    void serializeOutDegreeHelper(vector<int> &data, int &pos, int blen, char *ptr) {
+    int serializeOutDegreeHelper(vector<int> &data, int &pos, int blen, char *ptr) {
         int dlen = data.size();
         int sz = sizeof(data[pos]);
-        int i = 0;
         while(pos < dlen && blen < MAX_BUF_SIZE) {
-            memcpy(ptr, &vertexes[i], sz);
+            memcpy(ptr, &data[pos], sz);
             ptr += sz;
             pos++;
             blen += sz;
         }
+        return blen;
     }
 
     int serializeVertexesHelper(vector<node> &data, int &pos, int blen, char *ptr) {
@@ -142,7 +142,7 @@ public:
         }
         pos = 0;
         while (pos < header.outNeighborNum) {
-            serializeOutDegreeHelper(outNeighbors, pos, blen, buf);
+            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf);
             outputFile.write(buf, blen);
             blen = 0;
         }
@@ -165,7 +165,7 @@ public:
         // Get the number of bytes read
         std::streamsize bytesRead = filePtr->gcount();
 
-        std::cout << "Read " << bytesRead << " bytes." << std::endl;
+        //std::cout << "Read " << bytesRead << " bytes." << std::endl;
         
         memcpy(&header, buf, sizeof(graphHeader));
         cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
@@ -190,14 +190,59 @@ public:
                     bytesRead -= sizeof(node);
                 } else if (outNeighIdx < header.outNeighborNum) {
                     memcpy(&outNeighbors[outNeighIdx], ptr, sizeof(int));
+                    //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
                     ptr += sizeof(int);
                     outNeighIdx++;
                     bytesRead -= sizeof(int);
                 }
+                //cout << "bytesRead:" << bytesRead << endl;
             }
         }
         delete filePtr;
         cout << "Deserialize success" << endl;
+    }
+
+    // Todo: when the vertexes is sorted according to id, use binary search.
+    int search(uint targetId) {
+        int lo = 0, hi = MAX_VERTEX_ID, mid = 0;
+        //cout << "targetId:" << targetId << endl;
+        for (int i = 0; i < vertexes.size(); i++) {
+            //cout << "id" << vertexes[i].id << endl;
+            if (vertexes[i].id == targetId) {
+                return i;
+            }
+        }
+        return -1;
+        /*
+        while (lo <= hi) {
+            mid = lo + (hi - lo) / 2;
+            cout << "id:" << vertexes[mid].id << endl;
+            if (vertexes[mid].id == targetId) {
+                return mid;
+            } else if (vertexes[mid].id < targetId) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        */
+        return -1;
+    }
+
+    bool getAllNeighbors(uint targetId, vector<uint> &neighbors) {
+        int idx = search(targetId);
+        if (idx == -1) {
+            //cout << "fail to get targetId" << targetId << endl;
+            return false;
+        }
+        int neighborNum = vertexes[idx].outDegree;
+        //cout << "idx:" << idx << " neighborNum:" << neighborNum << endl;
+        neighbors.resize(neighborNum);
+        int endPos = vertexes[idx].offset + neighborNum;
+        for (int i = vertexes[idx].offset, cnt = 0; i < endPos; ++i, ++cnt) {
+            neighbors[cnt] = outNeighbors[i];
+        }
+        return true;
     }
 };
 

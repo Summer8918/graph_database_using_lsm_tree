@@ -1,6 +1,5 @@
 #include "vertex.h"
-#include "graph.h"
-#include "db_test_utils.h"
+#include "lsmtree_db.h"
 #include <filesystem>
 #include <chrono>
 
@@ -33,6 +32,7 @@ int main(int argc, char** argv) {
     int edgeNum = 0;
     std::vector<uint32_t> srcs;
     std::vector<uint32_t> dests;
+    int maxVertexId = 0;
     while (initGraphFile.getLine(a, b)) {
         // cout << "a" << a << " b" << b << endl;
         edgeNum = sg.addEdge(a, b);
@@ -45,20 +45,23 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    maxVertexId = a;
+    cout << "maxVertexId:" << maxVertexId << endl;
     sg.setOutDegree();
     cout << "edgeNum:" << edgeNum << endl;
+    //sg.printSubgraph();
     sg.serializeAndAppendBinToDisk(dirPath + "/l" + to_string(0));
     sg.clearSubgraph();
     sg.deserialize(dirPath + "/l" + to_string(0));
     //sg.printSubgraph();
-    // sg.flushSubgraphToDisk(dirPath+"/l"+to_string(0));
-    sg.clearSubgraph();
 
-    commandLine P(argc, argv, "./graph_bm [-r rounds]");
+    commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
+            a source vertex to run the BFS from]");
     uint64_t num_edges = sg.edgeNum;
     auto perm = get_random_permutation(num_edges);
 
     // add edges in batch
+    cout << "add edges in batch" << endl;
     for (uint64_t i = 0; i < num_edges; i++) {
         auto idx = perm[i];
         sg.addEdge(srcs[idx], dests[idx]);
@@ -71,7 +74,7 @@ int main(int argc, char** argv) {
     for (auto test_id : test_ids) {
         double total_time = 0.0;
         for (size_t i = 0; i < rounds; i++) {
-            double tm = execute(sg, P, test_id, i);
+            auto tm = execute(sg, P, test_id);
 
             // std::cout << "RESULT"  << fixed << setprecision(6)
             std::cout << "\ttest=" << test_id

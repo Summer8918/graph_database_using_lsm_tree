@@ -1,6 +1,10 @@
+#include "graph.h"
 #include <string>
 #include <iostream>
 #include <vector>
+#include <bitset>
+#include <queue>
+#include <chrono>
 using namespace std;
 
 struct commandLine {
@@ -137,13 +141,51 @@ std::vector<uint32_t> get_random_permutation(uint32_t num) {
 	return perm;
 }
 
-// TODO: test BFS
-template <class Graph>
-double execute(Graph& G, commandLine& P, std::string testname, int i) {
-    if (testname == "BFS") {
-        //return test_bfs(G, P,i );
-    } else {
-        std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
+void test_bfs(subGraph& G, commandLine& P) {
+  long src = P.getOptionLongValue("-src",-1);
+  if (src == -1) {
+    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+    exit(0);
+  }
+  cout << "test bfs" << endl;
+  bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+  visitedBitMap.reset();
+  queue<uint> q;
+  q.push(src);
+  visitedBitMap.set(src);
+  vector<uint> neighbors;
+  int visitedNeighborNum = 0;
+  while (!q.empty()) {
+    uint id = q.front();
+    //cout << "BFS visited id" << id << endl;
+    q.pop();
+    visitedNeighborNum++;
+    if (visitedNeighborNum % 10 == 0) {
+      cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
     }
-    return 0;
+    if(G.getAllNeighbors(id, neighbors)) {
+      //cout << "Neighbors size" << neighbors.size() << endl;
+      for (auto & neighbor : neighbors) {
+        if (!visitedBitMap[neighbor]) {
+          visitedBitMap.set(neighbor);
+          q.push(neighbor);
+        }
+      }
+    }
+  }
+}
+
+long execute(subGraph& G, commandLine& P, std::string testname) {
+  // Record the start time
+  auto startTime = std::chrono::high_resolution_clock::now();
+  if (testname == "BFS") {
+    test_bfs(G, P);
+  } else {
+    std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
+  }
+  // Record the end time
+  auto endTime = std::chrono::high_resolution_clock::now();
+  // Calculate the duration in microseconds
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  return duration.count();
 }
