@@ -21,17 +21,21 @@ struct node {
     }
 };
 
-class subGraph {
+struct graphHeader {
+    int vertexNum;
+    int outNeighborNum;
+};
 
+class subGraph {
 public:
-int totalLen;
-char *buf;
-int vertexesSize;
-vector<node> vertexes;
-int outNeighborsSize;
-vector<int> outNeighbors;
+    char *buf;
+    vector<node> vertexes;
+    graphHeader header;
+    vector<int> outNeighbors;
+    uint64_t edgeNum;
+
     subGraph() {
-        totalLen = 0;
+        edgeNum = 0;
         buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
     }
 
@@ -40,11 +44,8 @@ vector<int> outNeighbors;
         free(buf);
     }
 
-    int getLenght() {
-        return totalLen;
-    }
-
     int addEdge(uint a, uint b) {
+        edgeNum++;
         if (!vertexes.empty()) {
             node backNode = vertexes.back();
             if (backNode.id != a) {
@@ -60,13 +61,11 @@ vector<int> outNeighbors;
             tmp.offset = 0;
             vertexes.push_back(tmp);
         }
-        totalLen = sizeof(totalLen) + sizeof(vertexesSize) + sizeof(outNeighborsSize) +\
-                vertexes.size() * sizeof(node) + outNeighbors.size() * sizeof(int);
-        //cout << "totalLen:" << totalLen << endl;
-        return totalLen;
+        return edgeNum;
     }
 
     void setOutDegree(void) {
+        cout << "vertexes.size()" << vertexes.size() << endl;
         uint sz = vertexes.size(), szo = outNeighbors.size();
         for (int i = 0; i < sz - 1; i++) {
             vertexes[i].outDegree = vertexes[i+1].offset - vertexes[i].offset;
@@ -81,13 +80,13 @@ vector<int> outNeighbors;
     }
 
     void clearSubgraph(void) {
-        totalLen = sizeof(outNeighborsSize) + sizeof(vertexesSize);
         vertexes.clear();
         outNeighbors.clear();
     }
 
     void printSubgraph(void) {
         //cout << "vertexes array size:" << vertexes.size() << endl;
+        cout << "edgeNum:" << edgeNum << endl;
         for (node &n : vertexes) {
             cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
                     << n.outDegree << endl;
@@ -100,34 +99,56 @@ vector<int> outNeighbors;
         cout << endl;
     }
 
-    void serialize() {
+    int serializeOutDegreeHelper(vector<int> &data, int &pos, int blen, char *ptr) {
+        int dlen = data.size();
+        int sz = sizeof(data[pos]);
+        while(pos < dlen && blen < MAX_BUF_SIZE) {
+            memcpy(ptr, &data[pos], sz);
+            ptr += sz;
+            pos++;
+            blen += sz;
+        }
+        return blen;
+    }
+
+    int serializeVertexesHelper(vector<node> &data, int &pos, int blen, char *ptr) {
+        int dlen = data.size();
+        int sz = sizeof(data[pos]);
+        while(pos < dlen && blen < MAX_BUF_SIZE) {
+            memcpy(ptr, &vertexes[pos], sz);
+            ptr += sz;
+            pos++;
+            blen += sz;
+        }
+        return blen;
+    }
+
+    void serializeAndAppendBinToDisk(string fileName) {
+        header.vertexNum = vertexes.size();
+        header.outNeighborNum = outNeighbors.size();
         char *ptr = buf;
-        if (ptr == NULL) {
-            cout << "ptr is NULL" << endl;
-        } else {
-            //cout << "ptr is valid" << endl;
+        int pos = 0, blen = 0;
+        memcpy(ptr, &header, sizeof(graphHeader));
+        ptr += sizeof(graphHeader);
+        cout << "vertexesSize:" << header.vertexNum << endl;
+        cout << "outNeighborsSize:" << header.outNeighborNum << endl;
+        std::fstream outputFile;
+        outputFile.open(fileName, ios::app | ios::binary);
+        outputFile.write(buf, sizeof(graphHeader));
+        while (pos < header.vertexNum ) {
+            blen = serializeVertexesHelper(vertexes, pos, blen, buf);
+            outputFile.write(buf, blen);
+            blen = 0;
         }
-        assert(totalLen <= MAX_SUB_GRAPH_STRUCT_SIZE);
-        if (totalLen > MAX_SUB_GRAPH_STRUCT_SIZE) {
-            cout << "error! totalLen " << totalLen << endl;
+        pos = 0;
+        while (pos < header.outNeighborNum) {
+            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf);
+            outputFile.write(buf, blen);
+            blen = 0;
         }
-        memcpy(ptr, &totalLen, sizeof(totalLen));
-        ptr += sizeof(totalLen);
-        memcpy(ptr, &vertexesSize, sizeof(vertexesSize));
-        ptr += sizeof(vertexesSize);
-        memcpy(ptr, &outNeighborsSize, sizeof(outNeighborsSize));
-        ptr += sizeof(outNeighborsSize);
-        //cout << "outNeighborsSize:" << outNeighborsSize << " vertexesSize:" << vertexesSize << endl;
-        for (int i = 0; i < vertexesSize; i++) {
-            memcpy(ptr, &vertexes[i], sizeof(vertexes[i]));
-            //cout << "vertexes: i" << i << " " << vertexes[i].id << endl;
-            ptr += sizeof(vertexes[i]);
-        }
-        for (int i = 0; i < outNeighborsSize; i++) {
-            //cout << "outNeighbors: i" << i << " " << outNeighbors[i] << endl;
-            memcpy(ptr, &outNeighbors[i], sizeof(outNeighbors[i]));
-            ptr += sizeof(outNeighbors[i]);
-        }
+        outputFile.close();
+        outputFile.flush();
+        cout << "serializeAndAppendBinToDisk success" << endl;
     }
 
     void deserialize(string fileName) {
@@ -137,64 +158,92 @@ vector<int> outNeighbors;
             abort();
         }
         filePtr->seekg(0, std::ios::end);
-        std::streampos fileSize = filePtr->tellg();
-        int len = (int)fileSize;
-        if (len > MAX_SUB_GRAPH_STRUCT_SIZE) {
-            std::cout << "length of file:" << fileName << "is " << len <<\
-                    " , it is larger than buffer"<< std::endl;
-            //abort();
-        }
+        int len = (int)filePtr->tellg();;
         filePtr->seekg(0, std::ios::beg);
-        filePtr->read(buf, min(len, MAX_SUB_GRAPH_STRUCT_SIZE));
-        char *ptr = buf;
-        memcpy(&totalLen, ptr, sizeof(totalLen));
-        ptr += sizeof(totalLen);
-        memcpy(&vertexesSize, ptr, sizeof(vertexesSize));
-        ptr += sizeof(vertexesSize);
-        memcpy(&outNeighborsSize, ptr, sizeof(outNeighborsSize));
-        ptr += sizeof(outNeighborsSize);
-        vertexes.resize(vertexesSize);
-        outNeighbors.resize(outNeighborsSize);
-        for (int i = 0; i < vertexesSize; i++) {
-            memcpy(&vertexes[i], ptr, sizeof(vertexes[i]));
-            ptr += sizeof(vertexes[i]);
-        }
-        for (int i = 0; i < outNeighborsSize; i++) {
-            memcpy(&outNeighbors[i], ptr, sizeof(outNeighbors[i]));
-            ptr += sizeof(outNeighbors[i]);
+        filePtr->read(buf, sizeof(graphHeader));
+        std::cout << "Deserialize file length:" << len << endl;
+        // Get the number of bytes read
+        std::streamsize bytesRead = filePtr->gcount();
+
+        //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+        
+        memcpy(&header, buf, sizeof(graphHeader));
+        cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
+        cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
+        vertexes.resize(header.vertexNum);
+        outNeighbors.resize(header.outNeighborNum);
+        len -= sizeof(graphHeader);
+        int vertexIdx = 0, outNeighIdx = 0;
+        while (len > 0) {
+            filePtr->read(buf, MAX_BUF_SIZE);
+            char *ptr = buf;
+            // Get the number of bytes read
+            int bytesRead = (int)filePtr->gcount();
+            len -= bytesRead;
+            //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+            while (bytesRead > 0) {
+                if (vertexIdx < header.vertexNum) {
+                    memcpy(&vertexes[vertexIdx], ptr, sizeof(node));
+                    //cout << "vertexes[vertexIdx]:" << vertexes[vertexIdx].id << endl;
+                    ptr += sizeof(node);
+                    vertexIdx++;
+                    bytesRead -= sizeof(node);
+                } else if (outNeighIdx < header.outNeighborNum) {
+                    memcpy(&outNeighbors[outNeighIdx], ptr, sizeof(int));
+                    //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
+                    ptr += sizeof(int);
+                    outNeighIdx++;
+                    bytesRead -= sizeof(int);
+                }
+                //cout << "bytesRead:" << bytesRead << endl;
+            }
         }
         delete filePtr;
+        cout << "Deserialize success" << endl;
     }
 
-    bool flushSubgraphToDisk(string fileName) {
-        vertexesSize = vertexes.size();
-        outNeighborsSize = outNeighbors.size();
-        serialize();
-        std::fstream outputFile;
-        outputFile.open(fileName, ios::out);
-        if (!outputFile) {
-            std::cout << "Unable to open file:" << fileName << std::endl;
-            abort();
+    // Todo: when the vertexes is sorted according to id, use binary search.
+    int search(uint targetId) {
+        int lo = 0, hi = MAX_VERTEX_ID, mid = 0;
+        //cout << "targetId:" << targetId << endl;
+        for (int i = 0; i < vertexes.size(); i++) {
+            //cout << "id" << vertexes[i].id << endl;
+            if (vertexes[i].id == targetId) {
+                return i;
+            }
         }
-        //cout << "write file length is:" << totalLen << endl;
-        outputFile.write(buf, totalLen);
-        //cout << "write file:" << fileName << "success!" << endl;
-        if (!outputFile) {
-            std::cout << "Unable to open file:" << fileName << std::endl;
-            abort();
+        return -1;
+        /*
+        while (lo <= hi) {
+            mid = lo + (hi - lo) / 2;
+            cout << "id:" << vertexes[mid].id << endl;
+            if (vertexes[mid].id == targetId) {
+                return mid;
+            } else if (vertexes[mid].id < targetId) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
         }
-        outputFile.close();
-        //cout << "close file:" << fileName << "success!" << endl;
+        */
+        return -1;
+    }
+
+    bool getAllNeighbors(uint targetId, vector<uint> &neighbors) {
+        int idx = search(targetId);
+        if (idx == -1) {
+            //cout << "fail to get targetId" << targetId << endl;
+            return false;
+        }
+        int neighborNum = vertexes[idx].outDegree;
+        //cout << "idx:" << idx << " neighborNum:" << neighborNum << endl;
+        neighbors.resize(neighborNum);
+        int endPos = vertexes[idx].offset + neighborNum;
+        for (int i = vertexes[idx].offset, cnt = 0; i < endPos; ++i, ++cnt) {
+            neighbors[cnt] = outNeighbors[i];
+        }
         return true;
     }
-
-private:
-// int totalLen;
-// char *buf;
-// int vertexesSize;
-// vector<node> vertexes;
-// int outNeighborsSize;
-// vector<int> outNeighbors;
 };
 
 class InitGraphFile {

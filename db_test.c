@@ -1,18 +1,14 @@
 #include "vertex.h"
-#include "graph.h"
+#include "lsmtree_db.h"
 #include <filesystem>
 #include <chrono>
 
 using namespace std;
 
-int main() {
+int main(int argc, char** argv) {
     cout << "hello db" << endl;
-
-    /* Code to test class initGraphFile and subGraph begin*/
-    //partOfsocLiveJournal1.txt or soc-LiveJournal1.txt
-    //string fileName = "partOfsocLiveJournal1.txt";
     string fileName = "soc-LiveJournal1.txt";
-    
+
     InitGraphFile initGraphFile(fileName.c_str());
 
     uint a, b;
@@ -23,8 +19,7 @@ int main() {
         if (filesystem::remove_all(dirPath)) {
             std::cout << "Deleted existing directory: " << dirPath << std::endl;
         } else {
-            std::cerr << "Failed to delete the existing directory: " << \
-                dirPath << std::endl;
+            std::cerr << "Failed to delete the existing directory: " << dirPath << std::endl;
             abort();
         }
     }
@@ -34,41 +29,65 @@ int main() {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
         return 1;
     }
-
-    // Record the start time
-    auto startTime = std::chrono::high_resolution_clock::now();
+    int edgeNum = 0;
+    std::vector<uint32_t> srcs;
+    std::vector<uint32_t> dests;
+    int maxVertexId = 0;
     while (initGraphFile.getLine(a, b)) {
-        //cout << "a" << a << " b" << b << endl; 
-        int sgLen = sg.addEdge(a, b);
-        if (sgLen >= MAX_ARRAYS_SIZE) {
-            sg.setOutDegree();
-            //sg.printSubgraph();
-            cout << "file name 1:" << to_string(cnt) << " cnt:" << cnt << endl;
-            sg.flushSubgraphToDisk(dirPath + "/" + to_string(cnt));
-            sg.clearSubgraph();
-            cnt += 1;
+        // cout << "a" << a << " b" << b << endl;
+        edgeNum = sg.addEdge(a, b);
+        srcs.push_back(a);
+        dests.push_back(b);
+        if (edgeNum % 1000000 == 0) {
+            cout << "edgeNum:" << edgeNum << endl;
+        }
+        if (edgeNum >= MAX_EDGE_NUM) {
+            break;
         }
     }
+    maxVertexId = a;
+    cout << "maxVertexId:" << maxVertexId << endl;
     sg.setOutDegree();
-    cout << "file name 2:" << to_string(cnt) << " cnt:" << cnt << endl;
+    cout << "edgeNum:" << edgeNum << endl;
     //sg.printSubgraph();
-    sg.flushSubgraphToDisk(dirPath+"/"+to_string(cnt));
+    sg.serializeAndAppendBinToDisk(dirPath + "/l" + to_string(0));
     sg.clearSubgraph();
+    sg.deserialize(dirPath + "/l" + to_string(0));
+    //sg.printSubgraph();
 
-    // Record the end time
-    auto endTime = std::chrono::high_resolution_clock::now();
-    // Calculate the duration in microseconds
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
+            a source vertex to run the BFS from]");
+    uint64_t num_edges = sg.edgeNum;
+    auto perm = get_random_permutation(num_edges);
 
-    // Print the duration
-    std::cout << "Time taken by function: " << duration.count() << " microseconds" << std::endl;
+    // add edges in batch
+    cout << "add edges in batch" << endl;
+    for (uint64_t i = 0; i < num_edges; i++) {
+        auto idx = perm[i];
+        sg.addEdge(srcs[idx], dests[idx]);
+    }
 
-    cout << "test deserialize" << endl;
-    sg.deserialize(dirPath+"/"+to_string(cnt));
+    std::vector<std::string> test_ids = {"BFS"};
+    size_t rounds = P.getOptionLongValue("-rounds", 4);
 
-    initGraphFile.testReadFile();
-    sg.printSubgraph();
-    /* Code to test clas initGraphFile and subGraph end*/
+    // Test the performance of BFS application.
+    for (auto test_id : test_ids) {
+        double total_time = 0.0;
+        for (size_t i = 0; i < rounds; i++) {
+            auto tm = execute(sg, P, test_id);
+
+            // std::cout << "RESULT"  << fixed << setprecision(6)
+            std::cout << "\ttest=" << test_id
+                    << "\ttime=" << tm
+                    << "\titeration=" << i << std::endl;
+            total_time += tm;
+        }
+        // std::cout << "RESULT (AVG)" << fixed << setprecision(6)
+        std::cout << "AVG"
+            << "\ttest=" << test_id
+            << "\ttime=" << (total_time / rounds)
+            << "\tgraph=" << fileName << std::endl;
+    }
 
     return 0;
 }

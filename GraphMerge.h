@@ -16,7 +16,7 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
     // Assuming the node ids are 0...N-1
     csrGraph.vertexes.resize(adjListGraph.N);
     csrGraph.outNeighbors.reserve(adjListGraph.N); // Reserve enough space
-    
+
     for (int i = 0; i < adjListGraph.N; ++i) {
         adjNode* current = adjListGraph.head[i];
         csrGraph.vertexes[i].id = i;
@@ -31,9 +31,8 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
     }
     
     // Update totalLen and other necessary fields for csrGraph
-    csrGraph.totalLen = csrGraph.vertexes.size() * sizeof(node) + csrGraph.outNeighbors.size() * sizeof(uintT);
-    csrGraph.vertexesSize = csrGraph.vertexes.size();
-    csrGraph.outNeighborsSize = csrGraph.outNeighbors.size();
+    csrGraph.header.vertexNum = csrGraph.vertexes.size();
+    csrGraph.header.outNeighborNum = csrGraph.outNeighbors.size();
     
     return csrGraph;
 }
@@ -88,9 +87,9 @@ subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
         }
     }
 
-    newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
-    newGraph.vertexesSize = newGraph.vertexes.size();
-    newGraph.outNeighborsSize = newGraph.outNeighbors.size();
+    //newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
+    newGraph.header.vertexNum = newGraph.vertexes.size();
+    newGraph.header.outNeighborNum = newGraph.outNeighbors.size();
 
     return newGraph;
 }
@@ -107,7 +106,7 @@ void printCSRGraph(const subGraph& csrGraph) {
     for (unsigned int n : csrGraph.outNeighbors) {
         cout << n << " ";
     }
-    cout << "\nTotal Length: " << csrGraph.totalLen << endl;
+    //cout << "\nTotal Length: " << csrGraph.totalLen << endl;
 }
 
 // // Test function for GraphMerge.h
