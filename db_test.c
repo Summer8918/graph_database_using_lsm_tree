@@ -1,9 +1,15 @@
 #include "vertex.h"
 #include "lsmtree_db.h"
-#include <filesystem>
 #include <chrono>
+#include <cstdlib>
+#include <sys/stat.h>
 
 using namespace std;
+
+bool directoryExists(const std::string& path) {
+    struct stat info;
+    return (stat(path.c_str(), &info) == 0) && S_ISDIR(info.st_mode);
+}
 
 int main(int argc, char** argv) {
     cout << "hello db" << endl;
@@ -15,15 +21,15 @@ int main(int argc, char** argv) {
     subGraph sg;
     int cnt = 0;
     std::string dirPath = "tmp";
-    if (filesystem::exists(dirPath)) {
-        if (filesystem::remove_all(dirPath)) {
+    if (directoryExists(dirPath)) {
+	if(std::system(("rmdir /s /q " + dirPath).c_str()) == 0) {
             std::cout << "Deleted existing directory: " << dirPath << std::endl;
         } else {
             std::cerr << "Failed to delete the existing directory: " << dirPath << std::endl;
             abort();
-        }
+	}
     }
-    if (std::filesystem::create_directory(dirPath)) {
+    if (std::system(("mkdir " + dirPath).c_str()) == 0) {
         std::cout << "Created new directory: " << dirPath << std::endl;
     } else {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
