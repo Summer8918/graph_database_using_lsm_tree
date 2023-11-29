@@ -33,7 +33,7 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
     // Update totalLen and other necessary fields for csrGraph
     csrGraph.header.vertexNum = csrGraph.vertexes.size();
     csrGraph.header.outNeighborNum = csrGraph.outNeighbors.size();
-    
+
     return csrGraph;
 }
 

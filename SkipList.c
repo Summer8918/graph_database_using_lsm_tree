@@ -3,6 +3,10 @@
 #include <string.h>
 #include "MemTable.h"
 
+struct slice{
+	char *data;
+	int len;
+};
 
 #define cmp_lt(a,b) (strcmp(a,b)<0)
 #define cmp_eq(a,b) (strcmp(a,b)==0)

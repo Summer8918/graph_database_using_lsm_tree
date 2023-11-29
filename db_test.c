@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     int cnt = 0;
     std::string dirPath = "tmp";
     if (directoryExists(dirPath)) {
-	if(std::system(("rmdir /s /q " + dirPath).c_str()) == 0) {
+	if(std::system(("rm -r " + dirPath).c_str()) == 0) {
             std::cout << "Deleted existing directory: " << dirPath << std::endl;
         } else {
             std::cerr << "Failed to delete the existing directory: " << dirPath << std::endl;
@@ -39,9 +39,12 @@ int main(int argc, char** argv) {
     std::vector<uint32_t> srcs;
     std::vector<uint32_t> dests;
     int maxVertexId = 0;
+    LSMTree *lsmtree = new LSMTree(dirPath);
     while (initGraphFile.getLine(a, b)) {
         // cout << "a" << a << " b" << b << endl;
         edgeNum = sg.addEdge(a, b);
+
+        lsmtree->addEdge(a, b);
         srcs.push_back(a);
         dests.push_back(b);
         if (edgeNum % 1000000 == 0) {
@@ -51,6 +54,7 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    lsmtree->convertToCSR();
     maxVertexId = a;
     cout << "maxVertexId:" << maxVertexId << endl;
     sg.setOutDegree();
@@ -71,10 +75,14 @@ int main(int argc, char** argv) {
     for (uint64_t i = 0; i < num_edges; i++) {
         auto idx = perm[i];
         sg.addEdge(srcs[idx], dests[idx]);
+        lsmtree->addEdge(a, b);
     }
-
+    lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);
+    // Skip BFS application currently
+    delete lsmtree;
+    return 0;
 
     // Test the performance of BFS application.
     for (auto test_id : test_ids) {
@@ -94,6 +102,6 @@ int main(int argc, char** argv) {
             << "\ttime=" << (total_time / rounds)
             << "\tgraph=" << fileName << std::endl;
     }
-
+    delete lsmtree;
     return 0;
 }

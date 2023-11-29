@@ -1,3 +1,5 @@
+
+
 #include "graph.h"
 #include <string>
 #include <iostream>
@@ -5,7 +7,13 @@
 #include <bitset>
 #include <queue>
 #include <chrono>
+#include <map>
 using namespace std;
+
+#define MAX_EDGE_NUM_IN_MEMTABLE 1024 * 512
+#define LEVEL_0_CSR_FILE_NUM 1
+#define MULTIPLE_BETWEEN_LEVEL 10
+#define MAX_LEVEL_NUM 7
 
 struct commandLine {
     int argc;
@@ -126,7 +134,7 @@ std::vector<uint32_t> get_random_permutation(uint32_t num) {
 
 	for (uint32_t i = 0; i < num; i++) {
 		vec[i] = i;
-    }
+  }
 
 	uint32_t cnt = 0, n = 0;
 	while (vec.size()) {
@@ -189,3 +197,138 @@ long execute(subGraph& G, commandLine& P, std::string testname) {
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
   return duration.count();
 }
+
+struct FileMetaData {
+  string fileName;
+  uint minNodeId;
+  uint maxNodeId;
+  uint edgeNum;
+};
+
+class MemTable{
+public:
+  uint64_t edgeNum;
+  map<uint, vector<uint>> memTable;
+
+  int addEdge(int a, int b) {
+    memTable[a].push_back(b);
+    edgeNum++;
+    if (edgeNum >= MAX_EDGE_NUM_IN_MEMTABLE) {
+      cout << " neet to convertToCSR" << endl;
+      return 1;
+    }
+    return 0;
+  }
+
+  void clearMemT() {
+    edgeNum = 0;
+    memTable.clear();
+  }
+};
+
+class LSMTree {
+public:
+  std::vector<std::vector<FileMetaData>> lsmtreeOnDiskData;
+  int cnt;  // to name the disk file
+  MemTable memt;
+  string dirPath;
+  vector<uint> edgeNumLimitOfLevels;
+
+  LSMTree (string dirPath_) : dirPath (dirPath_) {
+    edgeNumLimitOfLevels.resize(MAX_LEVEL_NUM);
+    edgeNumLimitOfLevels[0] = LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE;
+    for (int i = 1; i < MAX_LEVEL_NUM; i++) {
+      edgeNumLimitOfLevels[i] = MULTIPLE_BETWEEN_LEVEL * edgeNumLimitOfLevels[i - 1];
+    }
+  }
+
+  string getFileName() {
+    return dirPath + "/" + to_string(cnt++);
+  }
+
+  void addEdge(uint a, uint b) {
+    if (memt.addEdge(a, b)) {
+      convertToCSR();
+    }
+  }
+
+  void convertToCSR() {
+    if (memt.edgeNum == 0) {
+      cout << "memt is empty, no need to convert to csr" << endl;
+      return;
+    }
+    subGraph *graph = new subGraph;
+    int sz = memt.memTable.size();
+    graph->vertexes.resize(sz);
+    uint64_t offset = 0;
+    int idx = 0;
+    for (auto it = memt.memTable.begin(); it != memt.memTable.end(); it++) {
+      //cout << "id in map:" << it->first << endl;
+      node n;
+      n.id = it->first;
+      n.offset = offset;
+      n.outDegree = it->second.size();
+      graph->vertexes[idx++] = n;
+      // note: the neighbors of a node is not sorted.
+      for (auto & o : it->second) {
+        graph->outNeighbors.push_back(o);
+      }
+      offset += it->second.size();
+    }
+    // Update totalLen and other necessary fields for csrGraph
+    graph->header.vertexNum = graph->vertexes.size();
+    graph->header.outNeighborNum = graph->outNeighbors.size();
+
+    string name = getFileName();
+    graph->edgeNum = memt.edgeNum;
+    graph->serializeAndAppendBinToDisk(name);
+    //cout << "file name:" << name << endl;
+
+    // Add file meta data to level 0;
+    FileMetaData file;
+    file.edgeNum = memt.edgeNum;
+    file.minNodeId = graph->vertexes.front().id;
+    file.maxNodeId = graph->vertexes.back().id;
+    file.fileName = name;
+    if (lsmtreeOnDiskData.size() < 1) {
+      vector<FileMetaData> level0 = {file};
+      lsmtreeOnDiskData.push_back(level0);
+    } else {
+      lsmtreeOnDiskData[0].push_back(file);
+    }
+
+    memt.clearMemT();
+
+    // To verify
+    //graph->clearSubgraph();
+    //graph->deserialize(name);
+    //graph->printSubgraph();
+
+    delete graph;
+    mayScheduleMerge();
+  }
+
+  // check lsmtreeOnDiskData to find if should do merge operation on each level.
+  void mayScheduleMerge() {
+    cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
+    for (int i = 0; i < MAX_LEVEL_NUM && i < lsmtreeOnDiskData.size(); i++) {
+      vector<FileMetaData> level = lsmtreeOnDiskData[i];
+      uint TotalEdgeNum = 0;
+      for (auto &f : level) {
+        TotalEdgeNum += f.edgeNum;
+      }
+      if (i == 0) {
+        cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
+            << edgeNumLimitOfLevels[i] << endl;
+      }
+      if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
+        implMerge(i, i+1);
+      }
+    }
+  }
+
+  // Do merge operation on CSR file in levela and levelb.
+  void implMerge(int levela, int levelb) {
+    cout << "Do merge operation on CSR files" << endl;
+  }
+};
