@@ -8,6 +8,7 @@
 #include <queue>
 #include <chrono>
 #include <map>
+#include "GraphMerge.h"
 using namespace std;
 
 #define MAX_EDGE_NUM_IN_MEMTABLE 1024 * 512
@@ -329,6 +330,41 @@ public:
 
   // Do merge operation on CSR file in levela and levelb.
   void implMerge(int levela, int levelb) {
-    cout << "Do merge operation on CSR files" << endl;
-  }
+    cout << "Merging CSR files from Level " << levela << " to Level " << levelb << endl;
+
+    // Assuming each level has a list of CSR files
+    auto& levelAFiles = lsmtreeOnDiskData[levela];
+    auto& levelBFiles = lsmtreeOnDiskData[levelb];
+
+    // Check if there are files to merge from levela to levelb
+    if (levelAFiles.empty()) {
+        cout << "No files to merge from Level " << levela << endl;
+        return;
+    }
+
+    // Load and merge CSR files
+    for (auto& fileA : levelAFiles) {
+        subGraph graphA;
+        graphA.deserialize(fileA); // Load CSR file from levela
+
+        for (auto& fileB : levelBFiles) {
+            subGraph graphB;
+            graphB.deserialize(fileB); // Load CSR file from levelb
+
+            subGraph mergedGraph;
+            mergeGraphs(graphA, graphB, mergedGraph); // Merge operation
+
+            // Serialize and store the merged graph
+            string mergedFileName = /* Logic to determine the file name for the merged graph */;
+            mergedGraph.serializeAndAppendBinToDisk(mergedFileName);
+
+            // Update the list of files in levelb to include the merged graph
+            levelBFiles.push_back(mergedFileName);
+        }
+    }
+
+    // Clear the files from the lower level after merging
+    levelAFiles.clear();
+
+    // Additional logic to handle LSM-tree compaction and metadata updates
 };
