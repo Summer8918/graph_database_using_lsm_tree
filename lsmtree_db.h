@@ -149,55 +149,6 @@ std::vector<uint32_t> get_random_permutation(uint32_t num) {
 	return perm;
 }
 
-void test_bfs(subGraph& G, commandLine& P) {
-  long src = P.getOptionLongValue("-src",-1);
-  if (src == -1) {
-    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
-    exit(0);
-  }
-  cout << "test bfs" << endl;
-  bitset<MAX_VERTEX_ID + 1> visitedBitMap;
-  visitedBitMap.reset();
-  queue<uint> q;
-  q.push(src);
-  visitedBitMap.set(src);
-  vector<uint> neighbors;
-  int visitedNeighborNum = 0;
-  while (!q.empty()) {
-    uint id = q.front();
-    //cout << "BFS visited id" << id << endl;
-    q.pop();
-    visitedNeighborNum++;
-    if (visitedNeighborNum % 10 == 0) {
-      cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
-    }
-    if(G.getAllNeighbors(id, neighbors)) {
-      //cout << "Neighbors size" << neighbors.size() << endl;
-      for (auto & neighbor : neighbors) {
-        if (!visitedBitMap[neighbor]) {
-          visitedBitMap.set(neighbor);
-          q.push(neighbor);
-        }
-      }
-    }
-  }
-}
-
-long execute(subGraph& G, commandLine& P, std::string testname) {
-  // Record the start time
-  auto startTime = std::chrono::high_resolution_clock::now();
-  if (testname == "BFS") {
-    test_bfs(G, P);
-  } else {
-    std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
-  }
-  // Record the end time
-  auto endTime = std::chrono::high_resolution_clock::now();
-  // Calculate the duration in microseconds
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-  return duration.count();
-}
-
 struct FileMetaData {
   string fileName;
   uint minNodeId;
@@ -404,4 +355,62 @@ public:
       }
     }
   }
+
+  void bfs(uint src) {
+
+  }
 };
+
+void test_bfs(subGraph& G, commandLine& P, LSMTree *lsmtree) {
+/*
+Concern: implement BFS on lsm-tree is very complex, as for each node,
+we need to search its neighbors in all levels of lsm-tree.
+The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_size.
+*/
+  long src = P.getOptionLongValue("-src", -1);
+  if (src == -1) {
+    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+    exit(0);
+  }
+  cout << "test bfs" << endl;
+  bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+  visitedBitMap.reset();
+  queue<uint> q;
+  q.push(src);
+  visitedBitMap.set(src);
+  vector<uint> neighbors;
+  int visitedNeighborNum = 0;
+  while (!q.empty()) {
+    uint id = q.front();
+    //cout << "BFS visited id" << id << endl;
+    q.pop();
+    visitedNeighborNum++;
+    if (visitedNeighborNum % 10 == 0) {
+      cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
+    }
+    if(G.getAllNeighbors(id, neighbors)) {
+      //cout << "Neighbors size" << neighbors.size() << endl;
+      for (auto & neighbor : neighbors) {
+        if (!visitedBitMap[neighbor]) {
+          visitedBitMap.set(neighbor);
+          q.push(neighbor);
+        }
+      }
+    }
+  }
+}
+
+long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree) {
+  // Record the start time
+  auto startTime = std::chrono::high_resolution_clock::now();
+  if (testname == "BFS") {
+    test_bfs(G, P, lsmtree);
+  } else {
+    std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
+  }
+  // Record the end time
+  auto endTime = std::chrono::high_resolution_clock::now();
+  // Calculate the duration in microseconds
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  return duration.count();
+}

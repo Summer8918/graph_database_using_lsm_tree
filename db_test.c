@@ -82,14 +82,12 @@ int main(int argc, char** argv) {
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);
     // Skip BFS application currently
-    delete lsmtree;
-    return 0;
 
     // Test the performance of BFS application.
     for (auto test_id : test_ids) {
         double total_time = 0.0;
         for (size_t i = 0; i < rounds; i++) {
-            auto tm = execute(sg, P, test_id);
+            auto tm = execute(sg, P, test_id, lsmtree);
 
             // std::cout << "RESULT"  << fixed << setprecision(6)
             std::cout << "\ttest=" << test_id
