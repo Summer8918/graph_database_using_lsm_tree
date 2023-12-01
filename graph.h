@@ -8,8 +8,6 @@
 #include <cassert>
 #include "utils.h"
 
-
-
 using namespace std;
 
 struct node {
@@ -87,17 +85,20 @@ public:
     }
 
     void printSubgraph(void) {
-        //cout << "vertexes array size:" << vertexes.size() << endl;
+        cout << "vertexes array size:" << vertexes.size() << endl;
         cout << "edgeNum:" << edgeNum << endl;
+        /*
         for (node &n : vertexes) {
             cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
                     << n.outDegree << endl;
         }
-        
+        */
         cout << "outNeighbors array size:" << outNeighbors.size() << endl;
+        /*
         for (auto &o : outNeighbors) {
             cout << o << " ";
         }
+        */
         cout << endl;
     }
 
@@ -125,7 +126,7 @@ public:
         return blen;
     }
 
-    void serializeAndAppendBinToDisk(string fileName) {
+    void serializeAndAppendBinToDisk(string &fileName) {
         header.vertexNum = vertexes.size();
         header.outNeighborNum = outNeighbors.size();
         char *ptr = buf;
@@ -200,6 +201,7 @@ public:
                 //cout << "bytesRead:" << bytesRead << endl;
             }
         }
+        edgeNum = header.outNeighborNum;
         delete filePtr;
         cout << "Deserialize success" << endl;
     }

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         } else {
             std::cerr << "Failed to delete the existing directory: " << dirPath << std::endl;
             abort();
-	}
+	    }
     }
     if (std::system(("mkdir " + dirPath).c_str()) == 0) {
         std::cout << "Created new directory: " << dirPath << std::endl;
@@ -60,9 +60,10 @@ int main(int argc, char** argv) {
     sg.setOutDegree();
     cout << "edgeNum:" << edgeNum << endl;
     //sg.printSubgraph();
-    sg.serializeAndAppendBinToDisk(dirPath + "/l" + to_string(0));
+    string nameTmp = dirPath + "/l" + to_string(0);
+    sg.serializeAndAppendBinToDisk(nameTmp);
     sg.clearSubgraph();
-    sg.deserialize(dirPath + "/l" + to_string(0));
+    sg.deserialize(nameTmp);
     //sg.printSubgraph();
 
     commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \

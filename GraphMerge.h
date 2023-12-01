@@ -38,16 +38,18 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
 }
 
 // Merge function for two CSR graphs that handles overlapping vertices
-subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
-    subGraph newGraph;
-    newGraph.vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
-    newGraph.outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
+subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
+    subGraph *newGraph = new subGraph;
+    newGraph->vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
+    newGraph->outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
 
     std::unordered_map<uintT, size_t> vertexMapping;
     for (const auto& v : G1.vertexes) {
-        newGraph.vertexes.push_back(v);
-        vertexMapping[v.id] = newGraph.vertexes.size() - 1;
-        newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), G1.outNeighbors.begin() + v.offset, G1.outNeighbors.begin() + v.offset + v.outDegree);
+        newGraph->vertexes.push_back(v);
+        vertexMapping[v.id] = newGraph->vertexes.size() - 1;
+        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), \
+            G1.outNeighbors.begin() + v.offset, \
+            G1.outNeighbors.begin() + v.offset + v.outDegree);
     }
 
     // Parallelize the merging of vertices from G2
@@ -57,8 +59,8 @@ subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
         auto it = vertexMapping.find(v.id);
         if (it != vertexMapping.end()) {
             // Handle overlapping vertices
-            node& existingNode = newGraph.vertexes[it->second];
-            size_t newOffset = newGraph.outNeighbors.size();
+            node& existingNode = newGraph->vertexes[it->second];
+            size_t newOffset = newGraph->outNeighbors.size();
             std::vector<uintT> tempNeighbors;
             tempNeighbors.reserve(v.outDegree);
             for (size_t j = 0; j < v.outDegree; ++j) {
@@ -67,7 +69,7 @@ subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
             }
             #pragma omp critical
             {
-                newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
+                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
                 existingNode.outDegree += tempNeighbors.size();
                 if (existingNode.outDegree > 0) {
                     existingNode.offset = newOffset;
@@ -76,21 +78,21 @@ subGraph mergeGraphs(const subGraph& G1, const subGraph& G2) {
         } else {
             // Handle unique vertices
             node newNode = v;
-            newNode.offset = newGraph.outNeighbors.size();
+            newNode.offset = newGraph->outNeighbors.size();
             std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + v.offset, G2.outNeighbors.begin() + v.offset + v.outDegree);
             #pragma omp critical
             {
-                newGraph.vertexes.push_back(newNode);
-                vertexMapping[v.id] = newGraph.vertexes.size() - 1;
-                newGraph.outNeighbors.insert(newGraph.outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
+                newGraph->vertexes.push_back(newNode);
+                vertexMapping[v.id] = newGraph->vertexes.size() - 1;
+                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
             }
         }
     }
 
     //newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
-    newGraph.header.vertexNum = newGraph.vertexes.size();
-    newGraph.header.outNeighborNum = newGraph.outNeighbors.size();
-
+    newGraph->header.vertexNum = newGraph->vertexes.size();
+    newGraph->header.outNeighborNum = newGraph->outNeighbors.size();
+    newGraph->edgeNum = newGraph->header.outNeighborNum;
     return newGraph;
 }
 

@@ -1,6 +1,5 @@
 
-
-#include "graph.h"
+#include "GraphMerge.h"
 #include <string>
 #include <iostream>
 #include <vector>
@@ -8,7 +7,7 @@
 #include <queue>
 #include <chrono>
 #include <map>
-#include "GraphMerge.h"
+
 using namespace std;
 
 #define MAX_EDGE_NUM_IN_MEMTABLE 1024 * 512
@@ -204,6 +203,10 @@ struct FileMetaData {
   uint minNodeId;
   uint maxNodeId;
   uint edgeNum;
+  void printDebugInfo() {
+    cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
+        << " maxNodeId" << maxNodeId << " edgeNum" << edgeNum << endl;
+  }
 };
 
 class MemTable{
@@ -227,16 +230,27 @@ public:
   }
 };
 
+
+void removeFile(string &fileDir) {
+  if(std::system(("rm " + fileDir).c_str()) == 0) {
+    std::cout << "Deleted existing directory: " << fileDir << std::endl;
+  } else {
+    std::cerr << "Failed to delete the existing directory: " << fileDir << std::endl;
+    abort();
+	}
+}
+
 class LSMTree {
 public:
   std::vector<std::vector<FileMetaData>> lsmtreeOnDiskData;
   int cnt;  // to name the disk file
   MemTable memt;
   string dirPath;
-  vector<uint> edgeNumLimitOfLevels;
+  vector<__uint64_t> edgeNumLimitOfLevels;
 
   LSMTree (string dirPath_) : dirPath (dirPath_) {
     edgeNumLimitOfLevels.resize(MAX_LEVEL_NUM);
+    lsmtreeOnDiskData.resize(MAX_LEVEL_NUM);
     edgeNumLimitOfLevels[0] = LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE;
     for (int i = 1; i < MAX_LEVEL_NUM; i++) {
       edgeNumLimitOfLevels[i] = MULTIPLE_BETWEEN_LEVEL * edgeNumLimitOfLevels[i - 1];
@@ -291,12 +305,7 @@ public:
     file.minNodeId = graph->vertexes.front().id;
     file.maxNodeId = graph->vertexes.back().id;
     file.fileName = name;
-    if (lsmtreeOnDiskData.size() < 1) {
-      vector<FileMetaData> level0 = {file};
-      lsmtreeOnDiskData.push_back(level0);
-    } else {
-      lsmtreeOnDiskData[0].push_back(file);
-    }
+    lsmtreeOnDiskData[0].push_back(file);
 
     memt.clearMemT();
 
@@ -312,18 +321,20 @@ public:
   // check lsmtreeOnDiskData to find if should do merge operation on each level.
   void mayScheduleMerge() {
     cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
-    for (int i = 0; i < MAX_LEVEL_NUM && i < lsmtreeOnDiskData.size(); i++) {
+    for (int i = 0; i < MAX_LEVEL_NUM - 1; i++) {
       vector<FileMetaData> level = lsmtreeOnDiskData[i];
       uint TotalEdgeNum = 0;
       for (auto &f : level) {
         TotalEdgeNum += f.edgeNum;
       }
-      if (i == 0) {
-        cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
-            << edgeNumLimitOfLevels[i] << endl;
-      }
+      cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
+            << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
+        cout << "defore merge:" << endl;
+        debugInfo();
         implMerge(i, i+1);
+        cout << "after merge:" << endl;
+        debugInfo();
       }
     }
   }
@@ -341,30 +352,56 @@ public:
         cout << "No files to merge from Level " << levela << endl;
         return;
     }
-
-    // Load and merge CSR files
-    for (auto& fileA : levelAFiles) {
-        subGraph graphA;
-        graphA.deserialize(fileA); // Load CSR file from levela
-
-        for (auto& fileB : levelBFiles) {
-            subGraph graphB;
-            graphB.deserialize(fileB); // Load CSR file from levelb
-
-            subGraph mergedGraph;
-            mergeGraphs(graphA, graphB, mergedGraph); // Merge operation
-
-            // Serialize and store the merged graph
-            string mergedFileName = /* Logic to determine the file name for the merged graph */;
-            mergedGraph.serializeAndAppendBinToDisk(mergedFileName);
-
-            // Update the list of files in levelb to include the merged graph
-            levelBFiles.push_back(mergedFileName);
-        }
+    // levelb is empty
+    if (levelBFiles.empty()) {
+      cout << "levelBFiles is empty " << endl;
+      lsmtreeOnDiskData[levelb].push_back(lsmtreeOnDiskData[levela].front());
+      lsmtreeOnDiskData[levela].clear();
+      return;
     }
+    FileMetaData fa = levelAFiles.front();
+    FileMetaData fb = levelBFiles.front();
+    subGraph *gA = new subGraph();
+    subGraph *gB = new subGraph();
 
+    gA->deserialize(fa.fileName);
+    gB->deserialize(fb.fileName);
+    subGraph *mergedGraph = mergeGraphs(*gA, *gB); // Merge operation
+
+    cout << "---gA----" << endl;
+    gA->printSubgraph();
+    cout << "---gB----" << endl;
+    gB->printSubgraph();
+    cout << "---mergedGraph----" << endl;
+    mergedGraph->printSubgraph();
+
+    delete gA;
+    delete gB;
+    FileMetaData mergedFile;
+    string mergedFileName = getFileName();
+    mergedGraph->serializeAndAppendBinToDisk(mergedFileName);
+    mergedFile.fileName = mergedFileName;
+    mergedFile.minNodeId = mergedGraph->vertexes.front().id;
+    mergedFile.maxNodeId = mergedGraph->vertexes.back().id;
+    mergedFile.edgeNum = mergedGraph->header.outNeighborNum;
     // Clear the files from the lower level after merging
     levelAFiles.clear();
+    lsmtreeOnDiskData[levelb].pop_back();
+    lsmtreeOnDiskData[levelb].push_back(mergedFile);
 
-    // Additional logic to handle LSM-tree compaction and metadata updates
+    removeFile(fa.fileName);
+    removeFile(fb.fileName);
+    delete mergedGraph;
+    cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
+      << "Merge res:" << mergedFile.fileName << endl;
+  }
+
+  void debugInfo() {
+    for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
+      if (!lsmtreeOnDiskData[i].empty()) {
+        cout << "Files in level i:" << i << endl;
+        lsmtreeOnDiskData[i].front().printDebugInfo();
+      }
+    }
+  }
 };
