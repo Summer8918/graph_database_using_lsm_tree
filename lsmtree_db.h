@@ -153,10 +153,12 @@ struct FileMetaData {
   string fileName;
   uint minNodeId;
   uint maxNodeId;
-  uint edgeNum;
+  uint edgeNum;  // out neighbors size
+  uint vertexNum;
   void printDebugInfo() {
     cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
-        << " maxNodeId" << maxNodeId << " edgeNum" << edgeNum << endl;
+        << " maxNodeId" << maxNodeId << " edgeNum" << edgeNum \
+        << " vertexNum" << vertexNum << endl;
   }
 };
 

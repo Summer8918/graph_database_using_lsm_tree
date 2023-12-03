@@ -12,14 +12,8 @@ bool directoryExists(const std::string& path) {
 }
 
 int main(int argc, char** argv) {
-    cout << "hello db" << endl;
-    string fileName = "soc-LiveJournal1.txt";
-
-    InitGraphFile initGraphFile(fileName.c_str());
-
-    uint a, b;
-    subGraph sg;
-    int cnt = 0;
+    vector<int> neighbors = {5,6,3,1,2};
+    Graph *graph = new Graph(0);
     std::string dirPath = "tmp";
     if (directoryExists(dirPath)) {
 	if(std::system(("rm -r " + dirPath).c_str()) == 0) {
@@ -35,25 +29,60 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
         return 1;
     }
+    string tmp = "tmp/tmp_file";
+    int vn = 0, on = 0;
+    for (int i = 0; i < 10; i++) {
+        vn++;
+        on += neighbors.size();
+        graph->addVertex(i, neighbors);
+        graph->flushToDisk(tmp);
+        neighbors.push_back(i);
+    }
+    uint vid = -1;
+
+    while (graph->readFileFromStart(vid, neighbors, tmp, vn, on)) {
+        cout << "vid:" << vid << " neighbors:" << endl;
+        for (int i = 0; i < neighbors.size(); i++) {
+            cout << neighbors[i] << " ";
+        }
+        cout << endl;
+    }
+    return 0;
+
+    /*
+    cout << "hello db" << endl;
+    string fileName = "soc-LiveJournal1.txt";
+
+    InitGraphFile initGraphFile(fileName.c_str());
+
+    uint a, b;
+    subGraph sg;
+    int cnt = 0;
+    
     int edgeNum = 0;
     std::vector<uint32_t> srcs;
     std::vector<uint32_t> dests;
+    Graph* graph = new Graph();
     int maxVertexId = 0;
     LSMTree *lsmtree = new LSMTree(dirPath);
+    uint offset = 0;
+    string test_graph_file = "tmp/graph";
+    int edgeCnt = 0;
     while (initGraphFile.getLine(a, b)) {
         // cout << "a" << a << " b" << b << endl;
-        edgeNum = sg.addEdge(a, b);
-
+        //edgeNum = sg.addEdge(a, b);
+        graph->addEdge(a, b);
         //lsmtree->addEdge(a, b);
         srcs.push_back(a);
         dests.push_back(b);
-        if (edgeNum % 1000000 == 0) {
-            cout << "edgeNum:" << edgeNum << endl;
-        }
-        if (edgeNum >= MAX_EDGE_NUM) {
-            break;
+        edgeCnt++;
+        if (edgeCnt % 100 == 0) {
+            offset += graph->serializeAndAppendBinToDisk(test_graph_file, offset);
+            cout << "offset:" << offset << endl;
         }
     }
+    //
+    graph->serializeAndAppendBinToDisk(test_graph_file, offset);
     sg.setOutDegree();
     commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
             a source vertex to run the BFS from]");
@@ -106,4 +135,5 @@ int main(int argc, char** argv) {
     }
     delete lsmtree;
     return 0;
+    */
 }
