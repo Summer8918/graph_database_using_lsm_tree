@@ -179,6 +179,17 @@ public:
     edgeNum = 0;
     memTable.clear();
   }
+
+  bool getNeighbors(uint targetId, vector<uint> &neighbors) {
+    if (memTable.find(targetId) == memTable.end()) {
+      neighbors.clear();
+      return false;
+    } else {
+      neighbors.resize(memTable[targetId].size());
+      neighbors = memTable[targetId];
+      return true;
+    }
+  }
 };
 
 
@@ -357,11 +368,67 @@ public:
   }
 
   void bfs(uint src) {
+    cout << "test bfs in LSM-tree" << endl;
+    bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+    visitedBitMap.reset();
+    queue<uint> q;
+    q.push(src);
+    visitedBitMap.set(src);
+    vector<uint> neighbors;
+    int visitedNodes = 1;
+    int steps = 0;
+    while (!q.empty()) {
+      queue<uint> q1 = q;
+      queue<uint> q2 = q1;
+      steps++;
+      // Traverse graph in Memtable
+      for (int i = q2.size(); i > 0; i--) {
+        uint id = q2.front();
+        q2.pop();
+        if(memt.getNeighbors(id, neighbors)) {
+          //cout << "Neighbors size" << neighbors.size() << endl;
+          for (auto & neighbor : neighbors) {
+            if (!visitedBitMap[neighbor]) {
+              visitedBitMap.set(neighbor);
+              q.push(neighbor);
+              visitedNodes++;
+            }
+          }
+        }
+      }
 
+      // Traverse graph in each level of LSM-tree
+      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+        if (lsmtreeOnDiskData[i].empty()) {
+          cout << "skip bfs on level:" << i << endl;
+          continue;
+        }
+        cout << "Bfs on level:" << i << endl;
+        q2 = q1;
+        for (int j = q2.size(); j > 0; j--) {
+          uint id = q2.front();
+          //cout << "BFS visited id" << id << endl;
+          q2.pop();
+          subGraph *graph = new subGraph;;
+          graph->deserialize(lsmtreeOnDiskData[i].front().fileName);
+          if(graph->getAllNeighbors(id, neighbors)) {
+            //cout << "Neighbors size" << neighbors.size() << endl;
+            for (auto & neighbor : neighbors) {
+              if (!visitedBitMap[neighbor]) {
+                visitedBitMap.set(neighbor);
+                q.push(neighbor);
+                visitedNodes++;
+              }
+            }
+          }
+        }
+      }
+      cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+    }
   }
 };
 
-void test_bfs(subGraph& G, commandLine& P, LSMTree *lsmtree) {
+void test_bfs(commandLine& P, LSMTree *lsmtree) {
 /*
 Concern: implement BFS on lsm-tree is very complex, as for each node,
 we need to search its neighbors in all levels of lsm-tree.
@@ -372,39 +439,54 @@ The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_
     std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
     exit(0);
   }
-  cout << "test bfs" << endl;
+  lsmtree->bfs(src);
+}
+
+void test_bfs_on_subGraph(subGraph& G, commandLine& P) {
+  long src = P.getOptionLongValue("-src",-1);
+  if (src == -1) {
+    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+    exit(0);
+  }
+  cout << "test bfs on subgraph" << endl;
   bitset<MAX_VERTEX_ID + 1> visitedBitMap;
   visitedBitMap.reset();
   queue<uint> q;
   q.push(src);
   visitedBitMap.set(src);
   vector<uint> neighbors;
-  int visitedNeighborNum = 0;
+  int visitedNodeNum = 1;
+  int steps = 0;
   while (!q.empty()) {
-    uint id = q.front();
-    //cout << "BFS visited id" << id << endl;
-    q.pop();
-    visitedNeighborNum++;
-    if (visitedNeighborNum % 10 == 0) {
-      cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
-    }
-    if(G.getAllNeighbors(id, neighbors)) {
-      //cout << "Neighbors size" << neighbors.size() << endl;
-      for (auto & neighbor : neighbors) {
-        if (!visitedBitMap[neighbor]) {
-          visitedBitMap.set(neighbor);
-          q.push(neighbor);
+    steps++;
+    for (int i = q.size(); i > 0; i--) {
+      uint id = q.front();
+      //cout << "BFS visited id" << id << endl;
+      q.pop();
+      if(G.getAllNeighbors(id, neighbors)) {
+        //cout << "Neighbors size" << neighbors.size() << endl;
+        for (auto & neighbor : neighbors) {
+          if (!visitedBitMap[neighbor]) {
+            visitedBitMap.set(neighbor);
+            q.push(neighbor);
+            visitedNodeNum++;
+            if (visitedNodeNum % 1000 == 0) {
+              cout << "visitedNodeNum" << visitedNodeNum << endl;
+            }
+          }
         }
       }
+      
     }
+    cout << "steps:" << steps << " visitedNodeNum" << visitedNodeNum << endl;
   }
 }
 
-long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree) {
+long execute(commandLine& P, std::string testname, LSMTree *lsmtree) {
   // Record the start time
   auto startTime = std::chrono::high_resolution_clock::now();
   if (testname == "BFS") {
-    test_bfs(G, P, lsmtree);
+    test_bfs(P, lsmtree);
   } else {
     std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
   }

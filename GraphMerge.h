@@ -29,7 +29,6 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
         
         csrGraph.vertexes[i].outDegree = csrGraph.outNeighbors.size() - csrGraph.vertexes[i].offset;
     }
-    
     // Update totalLen and other necessary fields for csrGraph
     csrGraph.header.vertexNum = csrGraph.vertexes.size();
     csrGraph.header.outNeighborNum = csrGraph.outNeighbors.size();
@@ -95,7 +94,6 @@ subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
     newGraph->edgeNum = newGraph->header.outNeighborNum;
     return newGraph;
 }
-
 
 // Utility function to print CSR graph
 void printCSRGraph(const subGraph& csrGraph) {

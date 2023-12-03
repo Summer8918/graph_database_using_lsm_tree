@@ -246,6 +246,7 @@ public:
         for (int i = vertexes[idx].offset, cnt = 0; i < endPos; ++i, ++cnt) {
             neighbors[cnt] = outNeighbors[i];
         }
+        //cout << "neighbors size:" << neighbors.size() << endl;
         return true;
     }
 };

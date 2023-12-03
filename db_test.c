@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
         // cout << "a" << a << " b" << b << endl;
         edgeNum = sg.addEdge(a, b);
 
-        lsmtree->addEdge(a, b);
+        //lsmtree->addEdge(a, b);
         srcs.push_back(a);
         dests.push_back(b);
         if (edgeNum % 1000000 == 0) {
@@ -54,10 +54,15 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    sg.setOutDegree();
+    commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
+            a source vertex to run the BFS from]");
+    test_bfs_on_subGraph(sg, P);
+    return 0;
+
     lsmtree->convertToCSR();
     maxVertexId = a;
     cout << "maxVertexId:" << maxVertexId << endl;
-    sg.setOutDegree();
     cout << "edgeNum:" << edgeNum << endl;
     //sg.printSubgraph();
     string nameTmp = dirPath + "/l" + to_string(0);
@@ -66,8 +71,6 @@ int main(int argc, char** argv) {
     sg.deserialize(nameTmp);
     //sg.printSubgraph();
 
-    commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
-            a source vertex to run the BFS from]");
     uint64_t num_edges = sg.edgeNum;
     auto perm = get_random_permutation(num_edges);
 
@@ -87,7 +90,7 @@ int main(int argc, char** argv) {
     for (auto test_id : test_ids) {
         double total_time = 0.0;
         for (size_t i = 0; i < rounds; i++) {
-            auto tm = execute(sg, P, test_id, lsmtree);
+            auto tm = execute(P, test_id, lsmtree);
 
             // std::cout << "RESULT"  << fixed << setprecision(6)
             std::cout << "\ttest=" << test_id
