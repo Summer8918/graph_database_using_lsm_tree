@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
         // cout << "a" << a << " b" << b << endl;
         edgeNum = sg.addEdge(a, b);
 
-        lsmtree->addEdge(a, b);
+        //lsmtree->addEdge(a, b);
         srcs.push_back(a);
         dests.push_back(b);
         if (edgeNum % 1000000 == 0) {
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     for (uint64_t i = 0; i < num_edges; i++) {
         auto idx = perm[i];
         sg.addEdge(srcs[idx], dests[idx]);
-        lsmtree->addEdge(a, b);
+        //lsmtree->addEdge(a, b);
     }
     lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
