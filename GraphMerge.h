@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <vector>
 #include <omp.h>
+#include <unordered_set>
 
 // Function to convert adjacency list graph to CSR graph
 subGraph convertToCSR(const DiaGraph& adjListGraph) {
@@ -39,6 +40,7 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
 
 // Merge function for two CSR graphs that handles overlapping vertices
 subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
+    std::unordered_set<unsigned int> uniqueNeighbors;
     subGraph *newGraph = new subGraph;
     newGraph->vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
     newGraph->outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
