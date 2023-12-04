@@ -60,20 +60,26 @@ subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
         if (it != vertexMapping.end()) {
             // Handle overlapping vertices
             node& existingNode = newGraph->vertexes[it->second];
-            size_t newOffset = newGraph->outNeighbors.size();
-            std::vector<uintT> tempNeighbors;
-            tempNeighbors.reserve(v.outDegree);
-            for (size_t j = 0; j < v.outDegree; ++j) {
-                uintT neighbor = G2.outNeighbors[v.offset + j];
-                tempNeighbors.push_back(neighbor);
+            std::unordered_set<uintT> uniqueNeighbors;
+            
+            // Add existing neighbors from newGraph
+            for (size_t j = existingNode.offset; j < existingNode.offset + existingNode.outDegree; ++j) {
+                uniqueNeighbors.insert(newGraph->outNeighbors[j]);
             }
+
+            // Add neighbors from G2
+            for (size_t j = 0; j < v.outDegree; ++j) {
+                uniqueNeighbors.insert(G2.outNeighbors[v.offset + j]);
+            }
+
             #pragma omp critical
             {
-                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
-                existingNode.outDegree += tempNeighbors.size();
-                if (existingNode.outDegree > 0) {
-                    existingNode.offset = newOffset;
-                }
+                // Update the existing node's offset and outDegree
+                existingNode.offset = newGraph->outNeighbors.size();
+                existingNode.outDegree = uniqueNeighbors.size();
+
+                // Add unique neighbors to newGraph's outNeighbors
+                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), uniqueNeighbors.begin(), uniqueNeighbors.end());
             }
         } else {
             // Handle unique vertices
