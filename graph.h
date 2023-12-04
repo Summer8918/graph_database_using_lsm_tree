@@ -28,7 +28,8 @@ struct graphHeader {
 
 class subGraph {
 public:
-    char *buf;
+    char *buf1;
+    char *buf2;
     vector<node> vertexes;
     graphHeader header;
     vector<int> outNeighbors;
@@ -36,12 +37,14 @@ public:
 
     subGraph() {
         edgeNum = 0;
-        buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
+        buf1 = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
+        buf2 = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
     }
 
     ~subGraph() {
         clearSubgraph();
-        free(buf);
+        free(buf1);
+        free(buf2);
     }
 
     int addEdge(uint a, uint b) {
@@ -129,7 +132,9 @@ public:
     void serializeAndAppendBinToDisk(string &fileName) {
         header.vertexNum = vertexes.size();
         header.outNeighborNum = outNeighbors.size();
-        char *ptr = buf;
+        char *ptr = buf1;
+        
+
         int pos = 0, blen = 0;
         memcpy(ptr, &header, sizeof(graphHeader));
         ptr += sizeof(graphHeader);
@@ -137,16 +142,16 @@ public:
         cout << "outNeighborsSize:" << header.outNeighborNum << endl;
         std::fstream outputFile;
         outputFile.open(fileName, ios::app | ios::binary);
-        outputFile.write(buf, sizeof(graphHeader));
+        outputFile.write(buf1, sizeof(graphHeader));
         while (pos < header.vertexNum ) {
-            blen = serializeVertexesHelper(vertexes, pos, blen, buf);
-            outputFile.write(buf, blen);
+            blen = serializeVertexesHelper(vertexes, pos, blen, buf1);
+            outputFile.write(buf1, blen);
             blen = 0;
         }
         pos = 0;
         while (pos < header.outNeighborNum) {
-            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf);
-            outputFile.write(buf, blen);
+            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf2);
+            outputFile.write(buf2, blen);
             blen = 0;
         }
         outputFile.close();
@@ -163,14 +168,14 @@ public:
         filePtr->seekg(0, std::ios::end);
         int len = (int)filePtr->tellg();;
         filePtr->seekg(0, std::ios::beg);
-        filePtr->read(buf, sizeof(graphHeader));
+        filePtr->read(buf1, sizeof(graphHeader));
         std::cout << "Deserialize file length:" << len << endl;
         // Get the number of bytes read
         std::streamsize bytesRead = filePtr->gcount();
 
         //std::cout << "Read " << bytesRead << " bytes." << std::endl;
         
-        memcpy(&header, buf, sizeof(graphHeader));
+        memcpy(&header, buf1, sizeof(graphHeader));
         cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
         cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
         vertexes.resize(header.vertexNum);
@@ -178,23 +183,24 @@ public:
         len -= sizeof(graphHeader);
         int vertexIdx = 0, outNeighIdx = 0;
         while (len > 0) {
-            filePtr->read(buf, MAX_BUF_SIZE);
-            char *ptr = buf;
+            filePtr->read(buf1, MAX_BUF_SIZE);
+            char *ptr1 = buf1;
+            char *ptr2 = buf2;
             // Get the number of bytes read
             int bytesRead = (int)filePtr->gcount();
             len -= bytesRead;
             //std::cout << "Read " << bytesRead << " bytes." << std::endl;
             while (bytesRead > 0) {
                 if (vertexIdx < header.vertexNum) {
-                    memcpy(&vertexes[vertexIdx], ptr, sizeof(node));
+                    memcpy(&vertexes[vertexIdx], ptr1, sizeof(node));
                     //cout << "vertexes[vertexIdx]:" << vertexes[vertexIdx].id << endl;
-                    ptr += sizeof(node);
+                    ptr1 += sizeof(node);
                     vertexIdx++;
                     bytesRead -= sizeof(node);
                 } else if (outNeighIdx < header.outNeighborNum) {
-                    memcpy(&outNeighbors[outNeighIdx], ptr, sizeof(int));
+                    memcpy(&outNeighbors[outNeighIdx], ptr2, sizeof(int));
                     //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
-                    ptr += sizeof(int);
+                    ptr2 += sizeof(int);
                     outNeighIdx++;
                     bytesRead -= sizeof(int);
                 }
