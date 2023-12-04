@@ -10,7 +10,7 @@ CC=g++
 
 all: db_test GraphMerge
 
-db_test: db_test.c graph.h vertex.h utils.h lsmtree_db.h
+db_test: db_test.c graph.h vertex.h utils.h lsmtree_db.h GraphMerge.h
 
 GraphMerge: GraphMerge.c GraphMerge.h adj_list_graph.h
 

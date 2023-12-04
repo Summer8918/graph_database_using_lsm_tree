@@ -269,26 +269,37 @@ public:
     Graph(uint off_) : off(off_) {
         buf = newA(char, MAX_SUB_GRAPH_STRUCT_SIZE);
         edgeNum = 0;
-        read_from_start_offset = -1;
+        read_from_start_offset = 0;
         posV = 0;
         posO = 0;
         v_read_bytes = 0;
         o_read_bytes = 0;
         vertexCnt = 0;
         neighborsCnt = 0;
+        vertexes.clear();
+        outNeighbors.clear();
     }
 
     ~Graph() {
         free(buf);
+        vertexes.clear();
+        outNeighbors.clear();
     }
 
-    uint addVertex(uint vertexId, vector<int> &neighbors) {
+    uint addVertex(uint vertexId, vector<uint> &neighbors) {
         node n;
         n.id = vertexId;
         n.outDegree = neighbors.size();
         n.offset = off;
         off += neighbors.size();
+        //cout << "In addVertex vertexes.size():" << vertexes.size() << endl;
         vertexes.push_back(n);
+        cout << "In addVertex vertexes.size():" << vertexes.size() << endl;
+        cout << "In addVertex neighbors.size():" << neighbors.size() << endl;
+        for (auto x : neighbors) {
+            cout << x << " ";
+        }
+        cout << endl;
         outNeighbors.insert(outNeighbors.end(), neighbors.begin(), neighbors.end());
         return off;
     }
@@ -296,8 +307,10 @@ public:
     int serializeVertexesHelper(vector<node> &data, int &pos, int blen, char *ptr) {
         int dlen = data.size();
         int sz = sizeof(data[pos]);
+        cout << "vertexes.size():" << vertexes.size() << endl;
         while(pos < dlen && blen < MAX_BUF_SIZE) {
             memcpy(ptr, &vertexes[pos], sz);
+            cout << "vertexes[pos].id" << data[pos].id << " od" << data[pos].outDegree << endl;
             ptr += sz;
             pos++;
             blen += sz;
@@ -310,10 +323,12 @@ public:
         int sz = sizeof(data[pos]);
         while(pos < dlen && blen < MAX_BUF_SIZE) {
             memcpy(ptr, &data[pos], sz);
+            cout << "od: " << data[pos] << " ";
             ptr += sz;
             pos++;
             blen += sz;
         }
+        cout << endl;
         return blen;
     }
 
@@ -332,8 +347,8 @@ public:
 
         string ofile = fileName + "o";
         outputFile.open(ofile, ios::app | ios::binary);
-        pos = 0;
-        while (pos < header.outNeighborNum) {
+        pos = 0, blen = 0, len = outNeighbors.size();
+        while (pos < len) {
             blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf);
             outputFile.write(buf, blen);
             blen = 0;
@@ -345,9 +360,11 @@ public:
 
     // reach end, return false;
     // not reach end, return true;
-    bool readFileFromStart(uint &vertexId, vector<int> &neighbors, string &fileName, 
+    bool readFileFromStart(node &vertex, vector<uint> &neighbors, string &fileName, 
             int vertex_num, int neighbors_num) {
-        if (read_from_start_offset == -1 || posV == vertexes.size()) {
+        cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
+            "neighbors_num:" << neighbors_num << endl;
+        if (read_from_start_offset == 0 || posV == vertexes.size()) {
             string vfile = fileName + "v";
             std::ifstream* vertexesPtr = new std::ifstream(vfile, std::ios::binary);
             if (!vertexesPtr->is_open()) {
@@ -359,17 +376,21 @@ public:
             int bytesRead = (int)vertexesPtr->gcount();
             v_read_bytes += bytesRead;
             int sz = sizeof(node);
-            int len = MAX_BUF_SIZE / sizeof(node);
-            vertexes.resize(sz);
+            int len = vertex_num - vertexCnt;
+            if (len > (int)MAX_BUF_SIZE / sz) {
+                len = (int)MAX_BUF_SIZE / sz;
+            }
+            vertexes.resize(len);
             char *ptr = buf;
-            for (int i = 0; i < len && i < vertex_num - vertexCnt; i++) {
-                memcpy(ptr, &vertexes[i], sz);
+            for (int i = 0; i < len; i++) {
+                memcpy(&vertexes[i], ptr, sz);
                 ptr += sz;
+                cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
             }
             posV = 0;
             vertexesPtr->close();
         }
-        if (read_from_start_offset == -1 || posO == outNeighbors.size()) {
+        if (read_from_start_offset == 0 || posO == outNeighbors.size()) {
             string ofile = fileName + "o";
             std::ifstream* neighborsPtr = new std::ifstream(ofile, std::ios::binary);
             if (!neighborsPtr->is_open()) {
@@ -381,11 +402,14 @@ public:
             int bytesRead = (int)neighborsPtr->gcount();
             o_read_bytes += bytesRead;
             int sz = sizeof(uint);
-            int len = MAX_BUF_SIZE / sizeof(uint);
-            outNeighbors.resize(sz);
+            int len = neighbors_num;
+            if (len > (int)MAX_BUF_SIZE / sz) {
+                len = (int)MAX_BUF_SIZE / sz;
+            }
+            outNeighbors.resize(len);
             char *ptr = buf;
             for (int i = 0; i < len && i < neighbors_num - neighborsCnt; i++) {
-                memcpy(ptr, &outNeighbors[i], sz);
+                memcpy(&outNeighbors[i], ptr, sz);
                 ptr += sz;
             }
             posO = 0;
@@ -395,9 +419,10 @@ public:
         // read to the end
         if (posV == vertexes.size() || vertexCnt >= vertex_num || \
                     neighborsCnt >= neighbors_num) {
+            cout << "read to end" << endl;
             return false;
         }
-        vertexId = vertexes[posV].id;
+        vertex = vertexes[posV];
         neighbors.resize(vertexes[posV].outDegree);
         for (int i = 0; i < vertexes[posV].outDegree; i++) {
             neighbors[i] = outNeighbors[posO++];
@@ -405,7 +430,12 @@ public:
         neighborsCnt += vertexes[posV].outDegree;
         vertexCnt++;
         posV++;
-        cout << "read_from_start_offset:" << read_from_start_offset << endl;
+        cout << "vertexes.size():" << vertexes.size() << " posV" << posV << endl;
+        cout << "outNeighbors.size()" << outNeighbors.size() << endl;
+        cout << " vertexCnt" << vertexCnt << " neighborsCnt" << neighborsCnt 
+                << " read_from_start_offset:" \
+                << read_from_start_offset << " neighbors.size()" 
+                << neighbors.size() << endl;
         return true;
     }
 };

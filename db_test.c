@@ -12,8 +12,6 @@ bool directoryExists(const std::string& path) {
 }
 
 int main(int argc, char** argv) {
-    vector<int> neighbors = {5,6,3,1,2};
-    Graph *graph = new Graph(0);
     std::string dirPath = "tmp";
     if (directoryExists(dirPath)) {
 	if(std::system(("rm -r " + dirPath).c_str()) == 0) {
@@ -29,6 +27,10 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
         return 1;
     }
+    // test class Graph begin
+    /*
+    vector<uint> neighbors = {5,6,3,1,2};
+    Graph *graph = new Graph(0);
     string tmp = "tmp/tmp_file";
     int vn = 0, on = 0;
     for (int i = 0; i < 10; i++) {
@@ -38,30 +40,40 @@ int main(int argc, char** argv) {
         graph->flushToDisk(tmp);
         neighbors.push_back(i);
     }
-    uint vid = -1;
-
-    while (graph->readFileFromStart(vid, neighbors, tmp, vn, on)) {
-        cout << "vid:" << vid << " neighbors:" << endl;
+    node n;
+    while (graph->readFileFromStart(n, neighbors, tmp, vn, on)) {
+        cout << "vid:" << n.id << " neighbors:" << endl;
         for (int i = 0; i < neighbors.size(); i++) {
             cout << neighbors[i] << " ";
         }
         cout << endl;
     }
+    */
+    // test class Graph end
+
+    cout << "hello db" << endl;
+    string fileName = "soc-LiveJournal1.txt";
+    InitGraphFile initGraphFile(fileName.c_str());
+    int edgeCnt = 0;
+    uint a, b;
+    std::vector<uint32_t> srcs;
+    std::vector<uint32_t> dests;
+
+    LSMTree *lsmtree = new LSMTree(dirPath);
+    while (initGraphFile.getLine(a, b)) {
+        lsmtree->addEdge(a, b);
+        srcs.push_back(a);
+        dests.push_back(b);
+        edgeCnt++;
+    }
     return 0;
 
     /*
-    cout << "hello db" << endl;
-    string fileName = "soc-LiveJournal1.txt";
 
-    InitGraphFile initGraphFile(fileName.c_str());
-
-    uint a, b;
+    
     subGraph sg;
     int cnt = 0;
     
-    int edgeNum = 0;
-    std::vector<uint32_t> srcs;
-    std::vector<uint32_t> dests;
     Graph* graph = new Graph();
     int maxVertexId = 0;
     LSMTree *lsmtree = new LSMTree(dirPath);

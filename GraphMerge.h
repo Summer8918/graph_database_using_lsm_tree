@@ -8,7 +8,28 @@
 #include <unordered_map>
 #include <algorithm>
 #include <vector>
+#include <unordered_set>
 #include <omp.h>
+
+struct FileMetaData {
+  FileMetaData() {
+    minNodeId = 0;
+    maxNodeId = 0;
+    edgeNum = 0;
+    vertexNum = 0;
+  }
+
+  string fileName;
+  uint minNodeId;
+  uint maxNodeId;
+  uint edgeNum;  // out neighbors size
+  uint vertexNum;
+  void printDebugInfo() {
+    cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
+        << " maxNodeId:" << maxNodeId << " edgeNum:" << edgeNum \
+        << " vertexNum:" << vertexNum << endl;
+  }
+};
 
 // Function to convert adjacency list graph to CSR graph
 subGraph convertToCSR(const DiaGraph& adjListGraph) {
@@ -34,6 +55,140 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
     csrGraph.header.outNeighborNum = csrGraph.outNeighbors.size();
 
     return csrGraph;
+}
+
+void debugInfo(node &a, vector<uint> n) {
+    cout << "id:" << a.id << " neighbors:" << endl;
+    for (int i = 0; i < n.size(); i++) {
+        cout << n[i] << " ";
+    }
+    cout << endl;
+}
+
+void validate(FileMetaData &file) {
+    node nb;
+    vector<uint> neighborsB;
+    Graph *gB = new Graph(0);
+    cout << "Validate after merge" << endl;
+    string name = file.fileName;
+    while (gB->readFileFromStart(nb, neighborsB, name, 
+        file.vertexNum, file.edgeNum)) {
+        cout << "id:" << nb.id << " neighbors:" << endl;
+        for (int i = 0; i < neighborsB.size(); i++) {
+            cout << neighborsB[i] << " ";
+        }
+        cout << endl;
+    }
+}
+
+Graph* externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
+    vector<uint> neighborsA, neighborsB;
+    Graph *gA = new Graph(0);
+    Graph *gB = new Graph(0);
+    node na, nb;
+    bool graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+            fA.vertexNum, fA.edgeNum);
+    if (graph_a_flag) {
+        debugInfo(na, neighborsA);
+    }
+    bool graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+            fB.vertexNum, fB.edgeNum);
+    if (graph_b_flag) {
+        debugInfo(nb, neighborsB);
+    }
+    Graph *gOutput = new Graph(0);
+    int edgeNum = 0;
+    fM.minNodeId = min(na.id, nb.id);
+    uint maxNodeId = 0;
+    while (graph_a_flag == true && graph_b_flag == true) {
+        cout << "graph_a_flag:" << graph_a_flag << " graph_b_flag:" << graph_b_flag << endl;
+        cout << "na id:" << na.id << " nb id:" << nb.id << endl;
+        maxNodeId = max({na.id, nb.id, maxNodeId});
+        if (na.id == nb.id) {
+            debugInfo(nb, neighborsB);
+            debugInfo(na, neighborsA);
+            unordered_set<uint> neighborsSet(neighborsA.begin(), neighborsA.end());
+            neighborsSet.insert(neighborsB.begin(), neighborsB.end());
+            cout << "neighborsA.size()" << neighborsA.size() << endl;
+            cout << "neighborsB.size()" << neighborsB.size() << endl;
+            std::vector<uint> mergedNeighbors = {neighborsSet.begin(), neighborsSet.end()};
+            edgeNum += mergedNeighbors.size();
+            fM.edgeNum += mergedNeighbors.size();
+            
+            gOutput->addVertex(na.id, mergedNeighbors);
+            cout << "mergedNeighbors.size():" << mergedNeighbors.size() << endl;
+    
+            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum);
+
+            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum);
+        } else if (na.id < nb.id) {
+            if (graph_a_flag) {
+                debugInfo(na, neighborsA);
+            }
+            gOutput->addVertex(na.id, neighborsA);
+            edgeNum += neighborsA.size();
+            fM.edgeNum += neighborsA.size();
+            cout << "merged neighborsA.size():" << neighborsA.size() << endl;
+            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum);
+        } else {
+            edgeNum += neighborsB.size();
+            fM.edgeNum += neighborsB.size();
+            fM.printDebugInfo();
+            gOutput->addVertex(nb.id, neighborsB);
+            cout << "merged neighborsB.size():" << neighborsB.size() << endl;
+
+            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum);
+        }
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        fM.vertexNum++;
+        cout << "edgeNum:" << edgeNum << endl;
+    }
+
+    while (graph_a_flag) {
+        maxNodeId = max(na.id, maxNodeId);
+        gOutput->addVertex(nb.id, neighborsA);
+        cout << "merged neighborsA.size():" << neighborsA.size() << endl;
+        edgeNum += neighborsA.size();
+        fM.edgeNum += neighborsA.size();
+        fM.printDebugInfo();
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum);
+        fM.vertexNum++;
+    }
+    while (graph_b_flag) {
+        maxNodeId = max(nb.id, maxNodeId);
+        gOutput->addVertex(nb.id, neighborsB);
+        cout << "merged neighborsB.size():" << neighborsB.size() << endl;
+        edgeNum += neighborsB.size();
+        fM.edgeNum += neighborsB.size();
+        fM.printDebugInfo();
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum);
+        fM.vertexNum++;
+    }
+    gOutput->flushToDisk(fM.fileName);
+    delete gA;
+    delete gB;
+    fM.maxNodeId = maxNodeId;
+    fM.printDebugInfo();
+    validate(fM);
+    cout << "External merge file success!" << endl;
+    return gOutput;
 }
 
 // Merge function for two CSR graphs that handles overlapping vertices
