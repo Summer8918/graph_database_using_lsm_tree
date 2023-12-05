@@ -378,7 +378,6 @@ The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_
   queue<uint> q;
   q.push(src);
   visitedBitMap.set(src);
-  vector<uint> neighbors;
   int visitedNeighborNum = 0;
   while (!q.empty()) {
     uint id = q.front();
@@ -388,7 +387,12 @@ The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_
     if (visitedNeighborNum % 10 == 0) {
       cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
     }
-    if(G.getAllNeighbors(id, neighbors)) {
+    int index = G.search(id);
+    if(id != -1){
+      int numNeighbor = G.vertexes[index].outDegree;
+      vector<uint> neighbors(numNeighbor);
+      G.getAllNeighbors(index, neighbors);
+    //if(neighbors.size()) {
       //cout << "Neighbors size" << neighbors.size() << endl;
       for (auto & neighbor : neighbors) {
         if (!visitedBitMap[neighbor]) {

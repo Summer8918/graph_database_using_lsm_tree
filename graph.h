@@ -239,15 +239,16 @@ public:
         return -1;
     }
 
-    bool getAllNeighbors(uint targetId, vector<uint> &neighbors) {
-        int idx = search(targetId);
+    bool getAllNeighbors(int idx, vector<uint> &neighbors) {
+        //int idx = search(targetId);
         if (idx == -1) {
             //cout << "fail to get targetId" << targetId << endl;
             return false;
         }
         int neighborNum = vertexes[idx].outDegree;
+        //vector<uint> new_vect(neighborNum);
         //cout << "idx:" << idx << " neighborNum:" << neighborNum << endl;
-        neighbors.resize(neighborNum);
+        //neighbors.resize(neighborNum);
         int endPos = vertexes[idx].offset + neighborNum;
         for (int i = vertexes[idx].offset, cnt = 0; i < endPos; ++i, ++cnt) {
             neighbors[cnt] = outNeighbors[i];
