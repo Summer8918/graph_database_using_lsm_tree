@@ -31,6 +31,143 @@ struct FileMetaData {
   }
 };
 
+void validate(FileMetaData &file) {
+    node nb;
+    vector<uint> neighborsB;
+    Graph *gB = new Graph(0);
+    cout << "Validate after merge" << endl;
+    string name = file.fileName;
+    while (gB->readFileFromStart(nb, neighborsB, name, 
+        file.vertexNum, file.edgeNum, file.maxNodeId, file.minNodeId)) {
+        cout << "id:" << nb.id << " neighbors:" << endl;
+        for (int i = 0; i < neighborsB.size(); i++) {
+            cout << neighborsB[i] << " ";
+        }
+        cout << endl;
+    }
+    delete gB;
+}
+
+void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
+    vector<uint> neighborsA, neighborsB;
+    Graph *gA = new Graph(0);
+    Graph *gB = new Graph(0);
+    node na, nb;
+    bool graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+            fA.vertexNum, fA.edgeNum, fA.minNodeId, fA.maxNodeId);
+
+    bool graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+            fB.vertexNum, fB.edgeNum, fB.minNodeId, fB.maxNodeId);
+
+    Graph *gOutput = new Graph(0);
+    uint edgeNum = 0;
+    fM.minNodeId = min(fA.minNodeId, fB.minNodeId);
+    fM.maxNodeId = max(fA.maxNodeId, fB.maxNodeId);
+    uint maxNodeId = 0;
+
+    while (graph_a_flag == true && graph_b_flag == true) {
+        cout << "na id:" << na.id << " nb id:" << nb.id << endl;
+        maxNodeId = max({na.id, nb.id, maxNodeId});
+        if (na.id == nb.id) {
+            unordered_set<uint> neighborsSet(neighborsA.begin(), neighborsA.end());
+            cout << "neighborsA.size()" << neighborsA.size() << endl;
+            cout << "neighborsB.size()" << neighborsB.size() << endl;
+            std::vector<uint> mergedNeighbors = neighborsA;
+            for (auto & b : neighborsB) {
+                if (neighborsSet.count(b) == 0) {
+                    mergedNeighbors.push_back(b);
+                }
+            }
+            assert(neighborsA.size() + neighborsB.size() >= mergedNeighbors.size());
+            edgeNum += mergedNeighbors.size();
+            fM.edgeNum += mergedNeighbors.size();
+            //cout << "mergedNeighbors.size():" << mergedNeighbors.size() << endl;
+            gOutput->addVertex(na.id, mergedNeighbors);
+
+            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum, fB.minNodeId, fB.maxNodeId);
+
+            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum, fA.minNodeId, fA.maxNodeId);
+        } else if (na.id < nb.id) {
+            gOutput->addVertex(na.id, neighborsA);
+            assert(neighborsA.size() <= fA.edgeNum);
+            edgeNum += neighborsA.size();
+            fM.edgeNum += neighborsA.size();
+            //cout << "merged neighborsA.size():" << neighborsA.size() << endl;
+            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum, fA.minNodeId, fA.maxNodeId);
+        } else {
+            edgeNum += neighborsB.size();
+            fM.edgeNum += neighborsB.size();
+            gOutput->addVertex(nb.id, neighborsB);
+            assert(neighborsB.size() <= fB.edgeNum);
+            //cout << "merged neighborsB.size():" << neighborsB.size() << endl;
+            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum, fB.minNodeId, fB.maxNodeId);
+        }
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        fM.vertexNum++;
+        cout << "edgeNum:" << edgeNum << endl;
+    }
+
+    while (graph_a_flag) {
+        maxNodeId = max(na.id, maxNodeId);
+        gOutput->addVertex(na.id, neighborsA);
+        assert(neighborsA.size() <= fA.edgeNum);
+        edgeNum += neighborsA.size();
+        fM.edgeNum += neighborsA.size();
+        //fM.printDebugInfo();
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
+                    fA.vertexNum, fA.edgeNum, fA.minNodeId, fA.maxNodeId);
+        fM.vertexNum++;
+    }
+    while (graph_b_flag) {
+        maxNodeId = max(nb.id, maxNodeId);
+        gOutput->addVertex(nb.id, neighborsB);
+        assert(neighborsB.size() <= fB.edgeNum);
+        edgeNum += neighborsB.size();
+        fM.edgeNum += neighborsB.size();
+        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
+            gOutput->flushToDisk(fM.fileName);
+            edgeNum = 0;
+        }
+        graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
+                    fB.vertexNum, fB.edgeNum, fB.minNodeId, fB.maxNodeId);
+        fM.vertexNum++;
+    }
+    gOutput->flushToDisk(fM.fileName);
+    delete gA;
+    delete gB;
+    fM.maxNodeId = maxNodeId;
+
+    if (fM.vertexNum > fA.vertexNum + fB.vertexNum) {
+        fB.printDebugInfo();
+        fA.printDebugInfo();
+        fM.printDebugInfo();
+        cout << "fM.vertexNum > fA.vertexNum + fB.vertexNum" << endl;
+        abort(); 
+    }
+    if (fB.edgeNum + fA.edgeNum < fM.edgeNum) {
+        fB.printDebugInfo();
+        fA.printDebugInfo();
+        fM.printDebugInfo();
+        cout << "fB.edgeNum + fA.edgeNum < fM.edgeNum" << endl;
+        abort();
+    }
+    //validate(fM);
+    cout << "External merge file success!" << endl;
+    delete gOutput;
+}
+
+/*
 // Function to convert adjacency list graph to CSR graph
 subGraph convertToCSR(const DiaGraph& adjListGraph) {
     subGraph csrGraph;
@@ -64,133 +201,9 @@ void debugInfo(node &a, vector<uint> n) {
     }
     cout << endl;
 }
+*/
 
-void validate(FileMetaData &file) {
-    node nb;
-    vector<uint> neighborsB;
-    Graph *gB = new Graph(0);
-    cout << "Validate after merge" << endl;
-    string name = file.fileName;
-    while (gB->readFileFromStart(nb, neighborsB, name, 
-        file.vertexNum, file.edgeNum)) {
-        cout << "id:" << nb.id << " neighbors:" << endl;
-        for (int i = 0; i < neighborsB.size(); i++) {
-            cout << neighborsB[i] << " ";
-        }
-        cout << endl;
-    }
-}
-
-Graph* externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
-    vector<uint> neighborsA, neighborsB;
-    Graph *gA = new Graph(0);
-    Graph *gB = new Graph(0);
-    node na, nb;
-    bool graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
-            fA.vertexNum, fA.edgeNum);
-    if (graph_a_flag) {
-        debugInfo(na, neighborsA);
-    }
-    bool graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
-            fB.vertexNum, fB.edgeNum);
-    if (graph_b_flag) {
-        debugInfo(nb, neighborsB);
-    }
-    Graph *gOutput = new Graph(0);
-    int edgeNum = 0;
-    fM.minNodeId = min(na.id, nb.id);
-    uint maxNodeId = 0;
-    while (graph_a_flag == true && graph_b_flag == true) {
-        cout << "graph_a_flag:" << graph_a_flag << " graph_b_flag:" << graph_b_flag << endl;
-        cout << "na id:" << na.id << " nb id:" << nb.id << endl;
-        maxNodeId = max({na.id, nb.id, maxNodeId});
-        if (na.id == nb.id) {
-            debugInfo(nb, neighborsB);
-            debugInfo(na, neighborsA);
-            unordered_set<uint> neighborsSet(neighborsA.begin(), neighborsA.end());
-            neighborsSet.insert(neighborsB.begin(), neighborsB.end());
-            cout << "neighborsA.size()" << neighborsA.size() << endl;
-            cout << "neighborsB.size()" << neighborsB.size() << endl;
-            std::vector<uint> mergedNeighbors = {neighborsSet.begin(), neighborsSet.end()};
-            edgeNum += mergedNeighbors.size();
-            fM.edgeNum += mergedNeighbors.size();
-            
-            gOutput->addVertex(na.id, mergedNeighbors);
-            cout << "mergedNeighbors.size():" << mergedNeighbors.size() << endl;
-    
-            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
-                    fB.vertexNum, fB.edgeNum);
-
-            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
-                    fA.vertexNum, fA.edgeNum);
-        } else if (na.id < nb.id) {
-            if (graph_a_flag) {
-                debugInfo(na, neighborsA);
-            }
-            gOutput->addVertex(na.id, neighborsA);
-            edgeNum += neighborsA.size();
-            fM.edgeNum += neighborsA.size();
-            cout << "merged neighborsA.size():" << neighborsA.size() << endl;
-            graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
-                    fA.vertexNum, fA.edgeNum);
-        } else {
-            edgeNum += neighborsB.size();
-            fM.edgeNum += neighborsB.size();
-            fM.printDebugInfo();
-            gOutput->addVertex(nb.id, neighborsB);
-            cout << "merged neighborsB.size():" << neighborsB.size() << endl;
-
-            graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
-                    fB.vertexNum, fB.edgeNum);
-        }
-        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
-            gOutput->flushToDisk(fM.fileName);
-            edgeNum = 0;
-        }
-        fM.vertexNum++;
-        cout << "edgeNum:" << edgeNum << endl;
-    }
-
-    while (graph_a_flag) {
-        maxNodeId = max(na.id, maxNodeId);
-        gOutput->addVertex(nb.id, neighborsA);
-        cout << "merged neighborsA.size():" << neighborsA.size() << endl;
-        edgeNum += neighborsA.size();
-        fM.edgeNum += neighborsA.size();
-        fM.printDebugInfo();
-        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
-            gOutput->flushToDisk(fM.fileName);
-            edgeNum = 0;
-        }
-        graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
-                    fA.vertexNum, fA.edgeNum);
-        fM.vertexNum++;
-    }
-    while (graph_b_flag) {
-        maxNodeId = max(nb.id, maxNodeId);
-        gOutput->addVertex(nb.id, neighborsB);
-        cout << "merged neighborsB.size():" << neighborsB.size() << endl;
-        edgeNum += neighborsB.size();
-        fM.edgeNum += neighborsB.size();
-        fM.printDebugInfo();
-        if (edgeNum >= FLUSH_EDGE_NUM_LIMIT) {
-            gOutput->flushToDisk(fM.fileName);
-            edgeNum = 0;
-        }
-        graph_b_flag = gB->readFileFromStart(nb, neighborsB, fB.fileName, 
-                    fB.vertexNum, fB.edgeNum);
-        fM.vertexNum++;
-    }
-    gOutput->flushToDisk(fM.fileName);
-    delete gA;
-    delete gB;
-    fM.maxNodeId = maxNodeId;
-    fM.printDebugInfo();
-    validate(fM);
-    cout << "External merge file success!" << endl;
-    return gOutput;
-}
-
+/*
 // Merge function for two CSR graphs that handles overlapping vertices
 subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
     subGraph *newGraph = new subGraph;
@@ -297,5 +310,5 @@ void printCSRGraph(const subGraph& csrGraph) {
 
 //     return 0;
 // }
-
+*/
 #endif  // GRAPHMERGE_H

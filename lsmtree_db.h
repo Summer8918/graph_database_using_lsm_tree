@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define MAX_EDGE_NUM_IN_MEMTABLE 50
+#define MAX_EDGE_NUM_IN_MEMTABLE 1024
 #define LEVEL_0_CSR_FILE_NUM 1
 #define MULTIPLE_BETWEEN_LEVEL 10
 #define MAX_LEVEL_NUM 7
@@ -188,7 +188,8 @@ void removeFile(string &fileDir) {
   if(std::system(("rm " + fileDir + "o " + fileDir + "v").c_str()) == 0) {
     std::cout << "Deleted existing directory: " << fileDir << std::endl;
   } else {
-    std::cerr << "Failed to delete the existing directory: " << fileDir << std::endl;
+    std::cerr << "Failed to delete the existing directory: " << fileDir + "o " + fileDir + "v" 
+        << std::endl;
     abort();
 	}
 }
@@ -203,8 +204,8 @@ public:
 
   LSMTree (string dirPath_) : dirPath (dirPath_) {
     cnt = 0;
-    edgeNumLimitOfLevels.resize(MAX_LEVEL_NUM);
-    lsmtreeOnDiskData.resize(MAX_LEVEL_NUM);
+    edgeNumLimitOfLevels.reserve(MAX_LEVEL_NUM);
+    lsmtreeOnDiskData.reserve(MAX_LEVEL_NUM);
     edgeNumLimitOfLevels[0] = LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE;
     for (int i = 1; i < MAX_LEVEL_NUM; i++) {
       edgeNumLimitOfLevels[i] = MULTIPLE_BETWEEN_LEVEL * edgeNumLimitOfLevels[i - 1];
@@ -232,15 +233,12 @@ public:
     uint64_t offset = 0;
     int idx = 0;
     for (auto it = memt.memTable.begin(); it != memt.memTable.end(); it++) {
-      cout << "id in map:" << it->first << endl;
-      cout << "it->second.size():" << it->second.size() << endl;
+      //cout << "id in map:" << it->first << endl;
+      //cout << "it->second.size():" << it->second.size() << endl;
       if (it->second.size() != 0) {
         graph->addVertex(it->first, it->second);
       }
     }
-    // Update totalLen and other necessary fields for csrGraph
-    graph->header.vertexNum = graph->vertexes.size();
-    graph->header.outNeighborNum = graph->outNeighbors.size();
 
     string name = getFileName();
     graph->edgeNum = memt.edgeNum;
@@ -254,19 +252,19 @@ public:
     file.maxNodeId = graph->vertexes.back().id;
     file.fileName = name;
     file.vertexNum = sz;
+    assert(lsmtreeOnDiskData[0].empty());
     lsmtreeOnDiskData[0].push_back(file);
     file.printDebugInfo();
     memt.clearMemT();
 
     delete graph;
-    // To validate
 
     mayScheduleMerge();
   }
 
   // check lsmtreeOnDiskData to find if should do merge operation on each level.
   void mayScheduleMerge() {
-    cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
+    //cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
     for (int i = 0; i < MAX_LEVEL_NUM - 1; i++) {
       vector<FileMetaData> level = lsmtreeOnDiskData[i];
       uint TotalEdgeNum = 0;
@@ -276,8 +274,8 @@ public:
       cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
             << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
-        cout << "defore merge:" << endl;
-        debugInfo();
+        //cout << "defore merge:" << endl;
+        //debugInfo();
         implMerge(i, i+1);
         cout << "after merge:" << endl;
         debugInfo();
@@ -294,10 +292,8 @@ public:
     auto& levelBFiles = lsmtreeOnDiskData[levelb];
 
     // Check if there are files to merge from levela to levelb
-    if (levelAFiles.empty()) {
-        cout << "No files to merge from Level " << levela << endl;
-        return;
-    }
+    assert(!levelAFiles.empty());
+
     // levelb is empty
     if (levelBFiles.empty()) {
       cout << "levelBFiles is empty " << endl;
@@ -307,10 +303,11 @@ public:
     }
     FileMetaData fa = levelAFiles.front();
     FileMetaData fb = levelBFiles.front();
+
     FileMetaData fMerged;
     fMerged.fileName = getFileName();
 
-    Graph *mergedGraph = externalMergeSort(fa, fb, fMerged); // Merge operation
+    externalMergeSort(fa, fb, fMerged); // Merge operation
 
     // Clear the files from the lower level after merging
     levelAFiles.clear();
@@ -319,7 +316,6 @@ public:
 
     removeFile(fa.fileName);
     removeFile(fb.fileName);
-    delete mergedGraph;
     cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
       << "Merge res:" << fMerged.fileName << endl;
   }
@@ -332,7 +328,7 @@ public:
       }
     }
   }
-
+/*
   void bfs(uint src) {
     cout << "test bfs in LSM-tree" << endl;
     bitset<MAX_VERTEX_ID + 1> visitedBitMap;
@@ -392,14 +388,12 @@ public:
       cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
     }
   }
+  */
 };
 
-void test_bfs(commandLine& P, LSMTree *lsmtree) {
 /*
-Concern: implement BFS on lsm-tree is very complex, as for each node,
-we need to search its neighbors in all levels of lsm-tree.
-The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_size.
-*/
+void test_bfs(commandLine& P, LSMTree *lsmtree) {
+
   long src = P.getOptionLongValue("-src", -1);
   if (src == -1) {
     std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
@@ -462,3 +456,4 @@ long execute(commandLine& P, std::string testname, LSMTree *lsmtree) {
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
   return duration.count();
 }
+*/
