@@ -72,12 +72,12 @@ int main(int argc, char** argv) {
     auto perm = get_random_permutation(num_edges);
 
     // add edges in batch
-    cout << "add edges in batch" << endl;
-    for (uint64_t i = 0; i < num_edges; i++) {
-        auto idx = perm[i];
-        sg.addEdge(srcs[idx], dests[idx]);
+    // cout << "add edges in batch" << endl;
+    // for (uint64_t i = 0; i < num_edges; i++) {
+    //     auto idx = perm[i];
+    //     sg.addEdge(srcs[idx], dests[idx]);
         //lsmtree->addEdge(a, b);
-    }
+    //}
     lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);
