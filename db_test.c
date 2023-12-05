@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
         // cout << "a" << a << " b" << b << endl;
         edgeNum = sg.addEdge(a, b);
 
-        //lsmtree->addEdge(a, b);
+        lsmtree->addEdge(a, b);
         srcs.push_back(a);
         dests.push_back(b);
         if (edgeNum % 1000000 == 0) {
@@ -60,34 +60,36 @@ int main(int argc, char** argv) {
     sg.setOutDegree();
     cout << "edgeNum:" << edgeNum << endl;
     //sg.printSubgraph();
-    string nameTmp = dirPath + "/l" + to_string(0);
-    sg.serializeAndAppendBinToDisk(nameTmp);
-    sg.clearSubgraph();
-    sg.deserialize(nameTmp);
+    //string nameTmp = dirPath + "/l" + to_string(0);
+    //sg.serializeAndAppendBinToDisk(nameTmp);
+    //sg.clearSubgraph();
+    //sg.deserialize(nameTmp);
     //sg.printSubgraph();
 
     commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
-            a source vertex to run the BFS from]");
+            a source vertex to run the BFS from] [-type 0: in_memory_graph, 1: lsm_tree_graph]");
     uint64_t num_edges = sg.edgeNum;
     auto perm = get_random_permutation(num_edges);
 
     // add edges in batch
-    // cout << "add edges in batch" << endl;
-    // for (uint64_t i = 0; i < num_edges; i++) {
-    //     auto idx = perm[i];
-    //     sg.addEdge(srcs[idx], dests[idx]);
-        //lsmtree->addEdge(a, b);
-    //}
+    cout << "add edges in batch" << endl;
+    for (uint64_t i = 0; i < num_edges; i++) {
+        auto idx = perm[i];
+        //sg.addEdge(srcs[idx], dests[idx]);
+        lsmtree->addEdge(a, b);
+    }
+
     lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);
+    int type = P.getOptionLongValue("-type", 0);
     // Skip BFS application currently
 
     // Test the performance of BFS application.
     for (auto test_id : test_ids) {
         double total_time = 0.0;
         for (size_t i = 0; i < rounds; i++) {
-            auto tm = execute(sg, P, test_id, lsmtree);
+            auto tm = execute(sg, P, test_id, lsmtree, type);
 
             // std::cout << "RESULT"  << fixed << setprecision(6)
             std::cout << "\ttest=" << test_id

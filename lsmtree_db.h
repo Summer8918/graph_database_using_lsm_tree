@@ -179,6 +179,17 @@ public:
     edgeNum = 0;
     memTable.clear();
   }
+
+  bool getNeighbors(uint targetId, vector<uint> &neighbors) {
+    if (memTable.find(targetId) == memTable.end()) {
+      neighbors.clear();
+      return false;
+    } else {
+      neighbors.resize(memTable[targetId].size());
+      neighbors = memTable[targetId];
+      return true;
+    }
+  }
 };
 
 
@@ -271,21 +282,21 @@ public:
 
   // check lsmtreeOnDiskData to find if should do merge operation on each level.
   void mayScheduleMerge() {
-    cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
+    //cout << "In mayScheduleMerge lsmtreeOnDiskData.size()" << lsmtreeOnDiskData.size() << endl;
     for (int i = 0; i < MAX_LEVEL_NUM - 1; i++) {
       vector<FileMetaData> level = lsmtreeOnDiskData[i];
       uint TotalEdgeNum = 0;
       for (auto &f : level) {
         TotalEdgeNum += f.edgeNum;
       }
-      cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
-            << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
+      //cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
+      //      << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
-        cout << "defore merge:" << endl;
-        debugInfo();
+        //cout << "defore merge:" << endl;
+        //debugInfo();
         implMerge(i, i+1);
-        cout << "after merge:" << endl;
-        debugInfo();
+        //cout << "after merge:" << endl;
+        //debugInfo();
       }
     }
   }
@@ -319,12 +330,12 @@ public:
     gB->deserialize(fb.fileName);
     subGraph *mergedGraph = mergeGraphs(*gA, *gB); // Merge operation
 
-    cout << "---gA----" << endl;
-    gA->printSubgraph();
-    cout << "---gB----" << endl;
-    gB->printSubgraph();
-    cout << "---mergedGraph----" << endl;
-    mergedGraph->printSubgraph();
+    //cout << "---gA----" << endl;
+    //gA->printSubgraph();
+    //cout << "---gB----" << endl;
+    //gB->printSubgraph();
+    //cout << "---mergedGraph----" << endl;
+    //mergedGraph->printSubgraph();
 
     delete gA;
     delete gB;
@@ -357,16 +368,82 @@ public:
   }
 
   void bfs(uint src) {
+    cout << "test bfs in LSM-tree" << endl;
+    bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+    visitedBitMap.reset();
+    queue<uint> q;
+    q.push(src);
+    visitedBitMap.set(src);
+    vector<uint> neighbors;
+    int visitedNodes = 1;
+    int steps = 0;
+    while (!q.empty()) {
+      queue<uint> q1 = q;
+      queue<uint> q2 = q1;
+      steps++;
+      // Traverse graph in Memtable
+      for (int i = q2.size(); i > 0; i--) {
+        uint id = q2.front();
+        q2.pop();
+        if(memt.getNeighbors(id, neighbors)) {
+          //cout << "Neighbors size" << neighbors.size() << endl;
+          for (auto & neighbor : neighbors) {
+            if (!visitedBitMap[neighbor]) {
+              visitedBitMap.set(neighbor);
+              q.push(neighbor);
+              visitedNodes++;
+            }
+          }
+        }
+      }
 
+      // Traverse graph in each level of LSM-tree
+      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+        if (lsmtreeOnDiskData[i].empty()) {
+          cout << "skip bfs on level:" << i << endl;
+          continue;
+        }
+        cout << "Bfs on level:" << i << endl;
+        q2 = q1;
+        for (int j = q2.size(); j > 0; j--) {
+          uint id = q2.front();
+          //cout << "BFS visited id" << id << endl;
+          q2.pop();
+          subGraph *graph = new subGraph;;
+          graph->deserialize(lsmtreeOnDiskData[i].front().fileName);
+          if(graph->getAllNeighbors(id, neighbors)) {
+            //cout << "Neighbors size" << neighbors.size() << endl;
+            for (auto & neighbor : neighbors) {
+              if (!visitedBitMap[neighbor]) {
+                visitedBitMap.set(neighbor);
+                q.push(neighbor);
+                visitedNodes++;
+              }
+            }
+          }
+        }
+      }
+      cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+    }
   }
 };
 
-void test_bfs(subGraph& G, commandLine& P, LSMTree *lsmtree) {
+void test_bfs_on_lsm_tree(LSMTree *lsmtree, commandLine& P) {
 /*
 Concern: implement BFS on lsm-tree is very complex, as for each node,
 we need to search its neighbors in all levels of lsm-tree.
 The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_size.
 */
+  long src = P.getOptionLongValue("-src", -1);
+  if (src == -1) {
+    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+    exit(0);
+  }
+  cout << "test bfs" << endl;
+  lsmtree->bfs(src);
+}
+
+void test_bfs_on_in_memory_graph(subGraph& G, commandLine& P) {
   long src = P.getOptionLongValue("-src", -1);
   if (src == -1) {
     std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
@@ -384,7 +461,7 @@ The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_
     //cout << "BFS visited id" << id << endl;
     q.pop();
     visitedNeighborNum++;
-    if (visitedNeighborNum % 10 == 0) {
+    if (visitedNeighborNum % 10000 == 0) {
       cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
     }
     int index = G.search(id);
@@ -404,11 +481,13 @@ The IO cost is extremely high, which equals to level_num * bfs_steps * csr_file_
   }
 }
 
-long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree) {
+long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree, int type) {
   // Record the start time
   auto startTime = std::chrono::high_resolution_clock::now();
-  if (testname == "BFS") {
-    test_bfs(G, P, lsmtree);
+  if (testname == "BFS" && type == 0) {
+    test_bfs_on_in_memory_graph(G, P);
+  } else if (testname == "BFS" && type == 1) {
+    test_bfs_on_lsm_tree(lsmtree, P);
   } else {
     std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
   }
