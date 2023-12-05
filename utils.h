@@ -3,7 +3,7 @@
 typedef unsigned int uintE;
 typedef unsigned int uintT;
 
-#define MAX_BUF_SIZE MAX_SUB_GRAPH_STRUCT_SIZE - 8
+#define MAX_BUF_SIZE 1024 * 32  // caution: be multiple of sizeof(node)
 #define MAX_ARRAYS_SIZE MAX_SUB_GRAPH_STRUCT_SIZE
 #define MAX_SUB_GRAPH_STRUCT_SIZE 1024 * 32
 

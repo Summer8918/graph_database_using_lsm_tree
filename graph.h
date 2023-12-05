@@ -10,14 +10,17 @@
 
 using namespace std;
 
+// caution! let node be 8 byte aligned.
 struct node {
     uint id;
     uint offset;
     uint outDegree;
+    uint reserved;
     node () {
         id = 0;
         offset = 0;
         outDegree = 0;
+        reserved = 0;
     }
 };
 
@@ -61,7 +64,8 @@ public:
         outNeighbors.clear();
     }
 
-    uint addVertex(uint vertexId, vector<uint> &neighbors) {
+    uint addVertex(uint preId, uint vertexId, vector<uint> &neighbors) {
+        assert(preId <= vertexId);
         node n;
         n.id = vertexId;
         n.outDegree = neighbors.size();
@@ -114,7 +118,7 @@ public:
         std::fstream outputFile;
         string vfile = fileName + "v";
         outputFile.open(vfile, ios::app | ios::binary);
-        int pos = 0, len = vertexes.size(), blen;
+        int pos = 0, len = vertexes.size(), blen = 0;  ////caution! init
         while (pos < len) {
             blen = serializeVertexesHelper(vertexes, pos, blen, buf);
             outputFile.write(buf, blen);
@@ -133,6 +137,8 @@ public:
         }
         outputFile.close();
         outputFile.flush();
+        vertexes.clear();  //caution!
+        outNeighbors.clear();   //caution!
         cout << "flushToDisk success" << endl;
     }
 
@@ -140,7 +146,7 @@ public:
     // not reach end, return true;
     bool readFileFromStart(node &vertex, vector<uint> &neighbors, string &fileName, 
             int vertex_num, int neighbors_num, uint minId, uint maxId) {
-        cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
+                cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
             "neighbors_num:" << neighbors_num << endl;
         // read to the end
         if (vertexCnt >= vertex_num) {
@@ -166,9 +172,12 @@ public:
             }
             vertexes.reserve(len);
             char *ptr = buf;
-            //cout << "len:" << len << endl;
+            cout << "len:" << len << endl;
+            node tmp_n;
+            int cnt = 0;
             for (int i = 0; i < len; i++) {
-                memcpy(&vertexes[i], ptr, sz);
+                memcpy(&tmp_n, ptr, sz);
+                vertexes.push_back(tmp_n);
                 ptr += sz;
                 if (vertexes[i].id > maxId || vertexes[i].outDegree > neighbors_num ||
                         vertexes[i].id < minId) { // == 174232
@@ -178,7 +187,9 @@ public:
                     abort();
                 }
                 cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
+                cnt++;
             }
+            cout << "cnt:" << cnt << endl;
             posV = 0;
             vertexesPtr->close();
             delete vertexesPtr;

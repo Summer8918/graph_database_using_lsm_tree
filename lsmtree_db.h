@@ -232,24 +232,25 @@ public:
     int sz = memt.memTable.size();
     uint64_t offset = 0;
     int idx = 0;
+    FileMetaData file;
     for (auto it = memt.memTable.begin(); it != memt.memTable.end(); it++) {
       //cout << "id in map:" << it->first << endl;
       //cout << "it->second.size():" << it->second.size() << endl;
       if (it->second.size() != 0) {
-        graph->addVertex(it->first, it->second);
+        graph->addVertex(0, it->first, it->second);
       }
     }
 
     string name = getFileName();
     graph->edgeNum = memt.edgeNum;
-    graph->flushToDisk(name);
-    //cout << "file name:" << name << endl;
 
     // Add file meta data to level 0;
-    FileMetaData file;
+
     file.edgeNum = memt.edgeNum;
     file.minNodeId = graph->vertexes.front().id;
     file.maxNodeId = graph->vertexes.back().id;
+    graph->flushToDisk(name);
+
     file.fileName = name;
     file.vertexNum = sz;
     assert(lsmtreeOnDiskData[0].empty());
@@ -314,8 +315,8 @@ public:
     lsmtreeOnDiskData[levelb].pop_back();
     lsmtreeOnDiskData[levelb].push_back(fMerged);
 
-    removeFile(fa.fileName);
-    removeFile(fb.fileName);
+    //removeFile(fa.fileName);
+    //removeFile(fb.fileName);
     cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
       << "Merge res:" << fMerged.fileName << endl;
   }
