@@ -90,18 +90,23 @@ public:
     void printSubgraph(void) {
         cout << "vertexes array size:" << vertexes.size() << endl;
         cout << "edgeNum:" << edgeNum << endl;
-        /*
+        // /*
         for (node &n : vertexes) {
             cout << "id:" << n.id << " offset:" << n.offset << " outDegree:" \
                     << n.outDegree << endl;
         }
-        */
+        // */
         cout << "outNeighbors array size:" << outNeighbors.size() << endl;
-        /*
+        // /*
+        int count = 0;
         for (auto &o : outNeighbors) {
-            cout << o << " ";
+            if (count <= 46)
+                cout << o << " ";
+            // if (count == 100)
+            //     break;
+            count++;
         }
-        */
+        // */
         cout << endl;
     }
 
@@ -129,7 +134,8 @@ public:
         return blen;
     }
 
-    void serializeAndAppendBinToDisk(string &fileName) {
+    void serializeAndAppendBinToDisk(string &fileName, string &nghbr_fileName) {
+        cout << "f: " << fileName << " " << nghbr_fileName << endl;
         header.vertexNum = vertexes.size();
         header.outNeighborNum = outNeighbors.size();
         char *ptr = buf1;
@@ -140,26 +146,33 @@ public:
         ptr += sizeof(graphHeader);
         cout << "vertexesSize:" << header.vertexNum << endl;
         cout << "outNeighborsSize:" << header.outNeighborNum << endl;
-        std::fstream outputFile;
+        std::fstream outputFile, nghbr_outputFile;
         outputFile.open(fileName, ios::app | ios::binary);
         outputFile.write(buf1, sizeof(graphHeader));
         while (pos < header.vertexNum ) {
             blen = serializeVertexesHelper(vertexes, pos, blen, buf1);
+            // outputFile.write(reinterpret_cast<const char*>(&blen), sizeof(int));
             outputFile.write(buf1, blen);
-            blen = 0;
-        }
-        pos = 0;
-        while (pos < header.outNeighborNum) {
-            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf2);
-            outputFile.write(buf2, blen);
             blen = 0;
         }
         outputFile.close();
         outputFile.flush();
+        nghbr_outputFile.open(nghbr_fileName, ios::app | ios::binary);
+        pos = 0;
+        while (pos < header.outNeighborNum) {
+            blen = serializeOutDegreeHelper(outNeighbors, pos, blen, buf2);
+            // nghbr_outputFile.write(reinterpret_cast<const char*>(&blen), sizeof(int));
+            nghbr_outputFile.write(buf2, blen);
+            blen = 0;
+        }
+        nghbr_outputFile.close();
+        nghbr_outputFile.flush();
+#ifdef ENABLE_DEBUG
         cout << "serializeAndAppendBinToDisk success" << endl;
+#endif
     }
 
-    void deserialize(string fileName) {
+    void deserialize(string fileName, string nghbr_fileName) {
         std::ifstream* filePtr = new std::ifstream(fileName, std::ios::binary);
         if (!filePtr->is_open()) {
             std::cout << "Unable to open file:" << fileName << std::endl;
@@ -169,20 +182,24 @@ public:
         int len = (int)filePtr->tellg();;
         filePtr->seekg(0, std::ios::beg);
         filePtr->read(buf1, sizeof(graphHeader));
-        std::cout << "Deserialize file length:" << len << endl;
+        // std::cout << "Deserialize file length:" << len << endl;
         // Get the number of bytes read
         std::streamsize bytesRead = filePtr->gcount();
 
         //std::cout << "Read " << bytesRead << " bytes." << std::endl;
         
         memcpy(&header, buf1, sizeof(graphHeader));
-        cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
-        cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
+        // cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
+        // cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
         vertexes.resize(header.vertexNum);
         outNeighbors.resize(header.outNeighborNum);
         len -= sizeof(graphHeader);
         int vertexIdx = 0, outNeighIdx = 0;
+        int plen;
         while (len > 0) {
+            // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
+            // int bytesRead = (int)filePtr->gcount();
+            // filePtr->read(buf1, plen);
             filePtr->read(buf1, MAX_BUF_SIZE);
             char *ptr1 = buf1;
             char *ptr2 = buf2;
@@ -197,19 +214,155 @@ public:
                     ptr1 += sizeof(node);
                     vertexIdx++;
                     bytesRead -= sizeof(node);
-                } else if (outNeighIdx < header.outNeighborNum) {
-                    memcpy(&outNeighbors[outNeighIdx], ptr2, sizeof(int));
-                    //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
-                    ptr2 += sizeof(int);
-                    outNeighIdx++;
-                    bytesRead -= sizeof(int);
+                } else {
+                    cout <<  "No" << endl;
                 }
                 //cout << "bytesRead:" << bytesRead << endl;
             }
         }
         edgeNum = header.outNeighborNum;
         delete filePtr;
-        cout << "Deserialize success" << endl;
+        filePtr = new std::ifstream(nghbr_fileName, std::ios::binary);
+        if (!filePtr->is_open()) {
+            std::cout << "Unable to open file:" << nghbr_fileName << std::endl;
+            abort();
+        }
+        filePtr->seekg(0, std::ios::end);
+        len = (int)filePtr->tellg();;
+        filePtr->seekg(0, std::ios::beg);
+        while (len > 0) {
+            // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
+            // int bytesRead = (int)filePtr->gcount();
+            // filePtr->read(buf1, plen);
+            filePtr->read(buf1, MAX_BUF_SIZE);
+            char *ptr1 = buf1;
+            // Get the number of bytes read
+            int bytesRead = (int)filePtr->gcount();
+            len -= bytesRead;
+            //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+            while (bytesRead > 0) {
+                if (outNeighIdx < header.outNeighborNum) {
+                    memcpy(&outNeighbors[outNeighIdx], ptr1, sizeof(int));
+                    //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
+                    ptr1 += sizeof(int);
+                    outNeighIdx++;
+                    bytesRead -= sizeof(int);
+                } else {
+                    cout << " OutNghbr: should not reach here" << endl;
+                }
+                //cout << "bytesRead:" << bytesRead << endl;
+            }
+        }
+        delete filePtr;
+        // cout << "Deserialize success" << endl;
+        // printSubgraph();
+    }
+
+    void deserialize_vertex(string fileName) {
+        std::ifstream* filePtr = new std::ifstream(fileName, std::ios::binary);
+        if (!filePtr->is_open()) {
+            std::cout << "Unable to open file:" << fileName << std::endl;
+            abort();
+        }
+        filePtr->seekg(0, std::ios::end);
+        int len = (int)filePtr->tellg();;
+        filePtr->seekg(0, std::ios::beg);
+        filePtr->read(buf1, sizeof(graphHeader));
+        // std::cout << "Deserialize file length:" << len << endl;
+        // Get the number of bytes read
+        std::streamsize bytesRead = filePtr->gcount();
+
+        //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+        
+        memcpy(&header, buf1, sizeof(graphHeader));
+        // cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
+        // cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
+        vertexes.resize(header.vertexNum);
+        len -= sizeof(graphHeader);
+        int vertexIdx = 0, outNeighIdx = 0;
+        int plen;
+        while (len > 0) {
+            // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
+            // int bytesRead = (int)filePtr->gcount();
+            // filePtr->read(buf1, plen);
+            filePtr->read(buf1, MAX_BUF_SIZE);
+            char *ptr1 = buf1;
+            char *ptr2 = buf2;
+            // Get the number of bytes read
+            int bytesRead = (int)filePtr->gcount();
+            len -= bytesRead;
+            //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+            while (bytesRead > 0) {
+                if (vertexIdx < header.vertexNum) {
+                    memcpy(&vertexes[vertexIdx], ptr1, sizeof(node));
+                    //cout << "vertexes[vertexIdx]:" << vertexes[vertexIdx].id << endl;
+                    ptr1 += sizeof(node);
+                    vertexIdx++;
+                    bytesRead -= sizeof(node);
+                } else {
+                    cout << "Shouldn't reach here" << endl;
+                }
+                //cout << "bytesRead:" << bytesRead << endl;
+            }
+        }
+        edgeNum = header.outNeighborNum;
+        delete filePtr;
+        // cout << "Deserialize success" << endl;
+        // printSubgraph();
+    }
+
+    void deserialize_nghbr(string fileName, string nghbr_fileName) {
+        std::ifstream* filePtr = new std::ifstream(fileName, std::ios::binary);
+        if (!filePtr->is_open()) {
+            std::cout << "Unable to open file:" << fileName << std::endl;
+            abort();
+        }
+        filePtr->seekg(0, std::ios::end);
+        int len = (int)filePtr->tellg();;
+        filePtr->seekg(0, std::ios::beg);
+        filePtr->read(buf1, sizeof(graphHeader));
+        delete filePtr;
+
+        memcpy(&header, buf1, sizeof(graphHeader));
+        // cout << "In deserialize vertexesSize:" << header.vertexNum << endl;
+        // cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
+        outNeighbors.resize(header.outNeighborNum);
+
+        filePtr = new std::ifstream(nghbr_fileName, std::ios::binary);
+        if (!filePtr->is_open()) {
+            std::cout << "Unable to open file:" << nghbr_fileName << std::endl;
+            abort();
+        }
+        filePtr->seekg(0, std::ios::end);
+        len = (int)filePtr->tellg();;
+        filePtr->seekg(0, std::ios::beg);
+        int outNeighIdx = 0;
+        while (len > 0) {
+            // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
+            // int bytesRead = (int)filePtr->gcount();
+            // filePtr->read(buf1, plen);
+            filePtr->read(buf1, MAX_BUF_SIZE);
+            char *ptr1 = buf1;
+            // Get the number of bytes read
+            int bytesRead = (int)filePtr->gcount();
+            len -= bytesRead;
+            //std::cout << "Read " << bytesRead << " bytes." << std::endl;
+            while (bytesRead > 0) {
+                if (outNeighIdx < header.outNeighborNum) {
+                    memcpy(&outNeighbors[outNeighIdx], ptr1, sizeof(int));
+                    //cout << "outNeighbors[outNeighIdx]:" << outNeighbors[outNeighIdx] << endl;
+                    ptr1 += sizeof(int);
+                    outNeighIdx++;
+                    bytesRead -= sizeof(int);
+                } else {
+                    cout << " OutNghbr: should not reach here" << endl;
+                }
+                //cout << "bytesRead:" << bytesRead << endl;
+            }
+        }
+        delete filePtr;
+        // cout << "Deserialize success" << endl;
+        // printSubgraph();
     }
 
     // Todo: when the vertexes is sorted according to id, use binary search.
@@ -246,12 +399,16 @@ public:
             return false;
         }
         int neighborNum = vertexes[idx].outDegree;
+#ifdef ENABLE_DEBUG
+        cout << neighborNum << " " << idx << std::endl;
+#endif
         //vector<uint> new_vect(neighborNum);
         //cout << "idx:" << idx << " neighborNum:" << neighborNum << endl;
         //neighbors.resize(neighborNum);
         int endPos = vertexes[idx].offset + neighborNum;
         for (int i = vertexes[idx].offset, cnt = 0; i < endPos; ++i, ++cnt) {
             neighbors[cnt] = outNeighbors[i];
+            // cout << "outNeighbor" << i << " " << outNeighbors[i] << std::endl;
         }
         return true;
     }
@@ -272,7 +429,7 @@ public:
         // Get the file length
         fileLen = (int)inputFile.tellg();
         remainLen = fileLen;
-        cout << "fileLen:" << fileLen << endl;
+        // cout << "fileLen:" << fileLen << endl;
         inputFile.seekg(0, std::ios::beg);
         buffer = newA(char, READ_INPUT_FILE_BUFFER_SIZE);
         inputFile.read(buffer, READ_INPUT_FILE_BUFFER_SIZE);

@@ -13,6 +13,7 @@ bool directoryExists(const std::string& path) {
 
 int main(int argc, char** argv) {
     cout << "hello db" << endl;
+    //string fileName = "partOfsocLiveJournal1.txt";
     string fileName = "soc-LiveJournal1.txt";
 
     InitGraphFile initGraphFile(fileName.c_str());
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
     cout << "maxVertexId:" << maxVertexId << endl;
     sg.setOutDegree();
     cout << "edgeNum:" << edgeNum << endl;
-    //sg.printSubgraph();
+    // sg.printSubgraph();
     //string nameTmp = dirPath + "/l" + to_string(0);
     //sg.serializeAndAppendBinToDisk(nameTmp);
     //sg.clearSubgraph();
@@ -71,14 +72,15 @@ int main(int argc, char** argv) {
     uint64_t num_edges = sg.edgeNum;
     auto perm = get_random_permutation(num_edges);
 
-    // add edges in batch
-    cout << "add edges in batch" << endl;
-    for (uint64_t i = 0; i < num_edges; i++) {
-        auto idx = perm[i];
-        //sg.addEdge(srcs[idx], dests[idx]);
-        lsmtree->addEdge(a, b);
-    }
+    // // add edges in batch
+    // cout << "add edges in batch" << endl;
+    // for (uint64_t i = 0; i < num_edges; i++) {
+    //     auto idx = perm[i];
+    //     //sg.addEdge(srcs[idx], dests[idx]);
+    //     lsmtree->addEdge(a, b);
+    // }
 
+    cout << "Second convert" << std::endl;
     lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);

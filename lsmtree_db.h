@@ -14,6 +14,7 @@ using namespace std;
 #define LEVEL_0_CSR_FILE_NUM 1
 #define MULTIPLE_BETWEEN_LEVEL 10
 #define MAX_LEVEL_NUM 7
+// #define ENABLE_DEBUG 1
 
 struct commandLine {
     int argc;
@@ -151,6 +152,7 @@ std::vector<uint32_t> get_random_permutation(uint32_t num) {
 
 struct FileMetaData {
   string fileName;
+  string nghbr_fileName;
   uint minNodeId;
   uint maxNodeId;
   uint edgeNum;
@@ -220,7 +222,11 @@ public:
   }
 
   string getFileName() {
-    return dirPath + "/" + to_string(cnt++);
+    return dirPath + "/" + to_string(cnt);
+  }
+
+  string getNghbrFileName() {
+    return dirPath + "/nghbr_" + to_string(cnt++);
   }
 
   void addEdge(uint a, uint b) {
@@ -257,8 +263,9 @@ public:
     graph->header.outNeighborNum = graph->outNeighbors.size();
 
     string name = getFileName();
+    string nghbr_name = getNghbrFileName();
     graph->edgeNum = memt.edgeNum;
-    graph->serializeAndAppendBinToDisk(name);
+    graph->serializeAndAppendBinToDisk(name, nghbr_name);
     //cout << "file name:" << name << endl;
 
     // Add file meta data to level 0;
@@ -267,6 +274,7 @@ public:
     file.minNodeId = graph->vertexes.front().id;
     file.maxNodeId = graph->vertexes.back().id;
     file.fileName = name;
+    file.nghbr_fileName = nghbr_name;
     lsmtreeOnDiskData[0].push_back(file);
 
     memt.clearMemT();
@@ -303,20 +311,25 @@ public:
 
   // Do merge operation on CSR file in levela and levelb.
   void implMerge(int levela, int levelb) {
+#ifdef ENABLE_DEBUG
     cout << "Merging CSR files from Level " << levela << " to Level " << levelb << endl;
-
+#endif
     // Assuming each level has a list of CSR files
     auto& levelAFiles = lsmtreeOnDiskData[levela];
     auto& levelBFiles = lsmtreeOnDiskData[levelb];
 
     // Check if there are files to merge from levela to levelb
     if (levelAFiles.empty()) {
+#ifdef ENABLE_DEBUG
         cout << "No files to merge from Level " << levela << endl;
+#endif
         return;
     }
     // levelb is empty
     if (levelBFiles.empty()) {
+#ifdef ENABLE_DEBUG
       cout << "levelBFiles is empty " << endl;
+#endif
       lsmtreeOnDiskData[levelb].push_back(lsmtreeOnDiskData[levela].front());
       lsmtreeOnDiskData[levela].clear();
       return;
@@ -326,8 +339,8 @@ public:
     subGraph *gA = new subGraph();
     subGraph *gB = new subGraph();
 
-    gA->deserialize(fa.fileName);
-    gB->deserialize(fb.fileName);
+    gA->deserialize(fa.fileName, fa.nghbr_fileName);
+    gB->deserialize(fb.fileName, fb.nghbr_fileName);
     subGraph *mergedGraph = mergeGraphs(*gA, *gB); // Merge operation
 
     //cout << "---gA----" << endl;
@@ -341,8 +354,10 @@ public:
     delete gB;
     FileMetaData mergedFile;
     string mergedFileName = getFileName();
-    mergedGraph->serializeAndAppendBinToDisk(mergedFileName);
+    string merged_nghbr_name = getNghbrFileName();
+    mergedGraph->serializeAndAppendBinToDisk(mergedFileName, merged_nghbr_name);
     mergedFile.fileName = mergedFileName;
+    mergedFile.nghbr_fileName = merged_nghbr_name;
     mergedFile.minNodeId = mergedGraph->vertexes.front().id;
     mergedFile.maxNodeId = mergedGraph->vertexes.back().id;
     mergedFile.edgeNum = mergedGraph->header.outNeighborNum;
@@ -352,10 +367,13 @@ public:
     lsmtreeOnDiskData[levelb].push_back(mergedFile);
 
     removeFile(fa.fileName);
+    removeFile(fa.nghbr_fileName);
     removeFile(fb.fileName);
     delete mergedGraph;
+#ifdef ENABLE_DEBUG
     cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
       << "Merge res:" << mergedFile.fileName << endl;
+#endif
   }
 
   void debugInfo() {
@@ -367,7 +385,82 @@ public:
     }
   }
 
+  void nghbr_from_both(int cur) {
+
+  }
+
   void bfs(uint src) {
+    cout << "test bfs in LSM-tree" << endl;
+    bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+    visitedBitMap.reset();
+    queue<uint> q;
+    q.push(src);
+    visitedBitMap.set(src);
+    vector<uint> neighbors;
+    int visitedNodes = 1;
+    int steps = 0;
+    while (!q.empty()) {
+      steps++;
+      // Traverse graph in Memtable
+      uint id = q.front();
+#ifdef ENABLE_DEBUG
+      cout << "id = " << id << endl;
+#endif
+      q.pop();
+      if(memt.getNeighbors(id, neighbors)) {
+        //cout << "Neighbors size" << neighbors.size() << endl;
+        for (auto & neighbor : neighbors) {
+          if (!visitedBitMap[neighbor]) {
+            visitedBitMap.set(neighbor);
+            q.push(neighbor);
+#ifdef ENABLE_DEBUG
+            cout << "M: push " << id << " " << neighbor << endl;
+#endif
+            visitedNodes++;
+          }
+        }
+      }
+#ifdef ENABLE_DEBUG
+      cout << "Done searching memtable" << endl;
+#endif
+      // Traverse graph in each level of LSM-tree
+      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+        if (lsmtreeOnDiskData[i].empty()) {
+#ifdef ENABLE_DEBUG
+          cout << "skip bfs on level:" << i << endl;
+#endif
+          continue;
+        }
+#ifdef ENABLE_DEBUG
+        cout << "Bfs on level:" << i << endl;
+#endif
+        subGraph *graph = new subGraph;;
+        graph->deserialize_vertex(lsmtreeOnDiskData[i].front().fileName);
+        int index = graph->search(id);
+        if(id != -1) {
+          graph->deserialize_nghbr(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
+          vector<uint> graph_neighbors(graph->vertexes[index].outDegree);
+          graph->getAllNeighbors(index, graph_neighbors);
+          //cout << "Neighbors size" << graph_neighbors.size() << endl;
+          for (auto & neighbor : graph_neighbors) {
+            if (!visitedBitMap[neighbor]) {
+              visitedBitMap.set(neighbor);
+              q.push(neighbor);
+#ifdef ENABLE_DEBUG
+              cout << "L: push " << id << " " << neighbor << endl;
+#endif
+              visitedNodes++;
+            }
+          }
+        }
+      }
+#ifdef ENABLE_DEBUG
+      cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+#endif
+    }
+  }
+
+  void old_bfs(uint src) {
     cout << "test bfs in LSM-tree" << endl;
     bitset<MAX_VERTEX_ID + 1> visitedBitMap;
     visitedBitMap.reset();
@@ -396,24 +489,32 @@ public:
           }
         }
       }
+#ifdef ENABLE_DEBUG
+      cout << "Done searching memtable" << endl;
+#endif
 
       // Traverse graph in each level of LSM-tree
       for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
         if (lsmtreeOnDiskData[i].empty()) {
+#ifdef ENABLE_DEBUG
           cout << "skip bfs on level:" << i << endl;
+#endif
           continue;
         }
-        cout << "Bfs on level:" << i << endl;
+        // cout << "Bfs on level:" << i << endl;
         q2 = q1;
         for (int j = q2.size(); j > 0; j--) {
           uint id = q2.front();
           //cout << "BFS visited id" << id << endl;
           q2.pop();
           subGraph *graph = new subGraph;;
-          graph->deserialize(lsmtreeOnDiskData[i].front().fileName);
-          if(graph->getAllNeighbors(id, neighbors)) {
-            //cout << "Neighbors size" << neighbors.size() << endl;
-            for (auto & neighbor : neighbors) {
+          graph->deserialize(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
+          int index = graph->search(id);
+          if(id != -1) {
+            vector<uint> graph_neighbors(graph->vertexes[index].outDegree);
+            graph->getAllNeighbors(index, graph_neighbors);
+            //cout << "Neighbors size" << graph_neighbors.size() << endl;
+            for (auto & neighbor : graph_neighbors) {
               if (!visitedBitMap[neighbor]) {
                 visitedBitMap.set(neighbor);
                 q.push(neighbor);
@@ -423,7 +524,9 @@ public:
           }
         }
       }
+#ifdef ENABLE_DEBUG
       cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+#endif
     }
   }
 };
