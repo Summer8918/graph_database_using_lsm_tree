@@ -69,7 +69,7 @@ public:
 
     void setOutDegree(void) {
         cout << "vertexes.size()" << vertexes.size() << endl;
-        uint sz = vertexes.size(), szo = outNeighbors.size();
+        int sz = vertexes.size(), szo = outNeighbors.size();
         for (int i = 0; i < sz - 1; i++) {
             vertexes[i].outDegree = vertexes[i+1].offset - vertexes[i].offset;
         }

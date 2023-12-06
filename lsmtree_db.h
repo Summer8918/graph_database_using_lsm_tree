@@ -14,7 +14,7 @@ using namespace std;
 #define LEVEL_0_CSR_FILE_NUM 1
 #define MULTIPLE_BETWEEN_LEVEL 10
 #define MAX_LEVEL_NUM 7
-// #define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 1
 
 struct commandLine {
     int argc;
@@ -574,7 +574,7 @@ void test_bfs_on_in_memory_graph(subGraph& G, commandLine& P) {
       int numNeighbor = G.vertexes[index].outDegree;
       vector<uint> neighbors(numNeighbor);
       G.getAllNeighbors(index, neighbors);
-    //if(neighbors.size()) {
+    // if(neighbors.size()) {
       //cout << "Neighbors size" << neighbors.size() << endl;
       for (auto & neighbor : neighbors) {
         if (!visitedBitMap[neighbor]) {
@@ -586,12 +586,25 @@ void test_bfs_on_in_memory_graph(subGraph& G, commandLine& P) {
   }
 }
 
-long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree, int type) {
+long execute_on_in_memory_graph(subGraph& G, commandLine& P, std::string testname) {
   // Record the start time
   auto startTime = std::chrono::high_resolution_clock::now();
-  if (testname == "BFS" && type == 0) {
+  if (testname == "BFS") {
     test_bfs_on_in_memory_graph(G, P);
-  } else if (testname == "BFS" && type == 1) {
+  } else {
+    std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
+  }
+  // Record the end time
+  auto endTime = std::chrono::high_resolution_clock::now();
+  // Calculate the duration in microseconds
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  return duration.count();
+}
+
+long execute_on_lsmtree_graph(LSMTree *lsmtree, commandLine& P, std::string testname) {
+  // Record the start time
+  auto startTime = std::chrono::high_resolution_clock::now();
+  if (testname == "BFS") {
     test_bfs_on_lsm_tree(lsmtree, P);
   } else {
     std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
@@ -602,3 +615,4 @@ long execute(subGraph& G, commandLine& P, std::string testname, LSMTree *lsmtree
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
   return duration.count();
 }
+

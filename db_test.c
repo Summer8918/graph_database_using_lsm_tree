@@ -11,6 +11,114 @@ bool directoryExists(const std::string& path) {
     return (stat(path.c_str(), &info) == 0) && S_ISDIR(info.st_mode);
 }
 
+void test_in_memory_graph(string &fileName, commandLine &P) {
+    auto startTime = std::chrono::high_resolution_clock::now();
+    InitGraphFile initGraphFile(fileName.c_str());
+    uint a, b;
+    subGraph *sg = new subGraph;
+    int edgeNum = 0;
+    while (initGraphFile.getLine(a, b)) {
+        // cout << "a" << a << " b" << b << endl;
+        edgeNum = sg->addEdge(a, b);
+        
+#ifdef ENABLE_DEBUG
+        if (edgeNum % 100000 == 0) {
+            cout << "edgeNum:" << edgeNum << endl;
+        }
+#endif
+        if (edgeNum >= MAX_EDGE_NUM) {
+            break;
+        }
+    }
+    sg->setOutDegree();
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    cout << "Time to construct the graph:" << duration.count() << endl;
+    // Test the performance of BFS application.
+    std::vector<std::string> test_ids = {"BFS"};
+    size_t rounds = P.getOptionLongValue("-rounds", 4);
+    for (auto test_id : test_ids) {
+        double total_time = 0.0;
+        for (size_t i = 0; i < rounds; i++) {
+            auto tm = execute_on_in_memory_graph(*sg, P, test_id);
+
+            // std::cout << "RESULT"  << fixed << setprecision(6)
+            std::cout << "\ttest=" << test_id
+                    << "\ttime=" << tm
+                    << "\titeration=" << i << std::endl;
+            total_time += tm;
+        }
+        // std::cout << "RESULT (AVG)" << fixed << setprecision(6)
+        std::cout << "AVG"
+            << "\ttest=" << test_id
+            << "\ttime=" << (total_time / rounds)
+            << "\tgraph=" << fileName << std::endl;
+    }
+    delete sg;
+}
+
+void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
+    auto startTime = std::chrono::high_resolution_clock::now();
+    InitGraphFile initGraphFile(fileName.c_str());
+    uint a, b;
+    std::vector<uint32_t> srcs;
+    std::vector<uint32_t> dests;
+    LSMTree *lsmtree = new LSMTree(dirPath);
+    uint64_t num_edges = 0;
+    while (initGraphFile.getLine(a, b)) {
+        // cout << "a" << a << " b" << b << endl;
+        num_edges++;
+        lsmtree->addEdge(a, b);
+        srcs.push_back(a);
+        dests.push_back(b);
+        if (num_edges % 1000000 == 0) {
+            cout << "num_edges:" << num_edges << endl;
+        }
+        if (num_edges >= MAX_EDGE_NUM) {
+            break;
+        }
+    }
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    cout << "Time to construct the graph:" << duration.count() << endl;
+
+    auto perm = get_random_permutation(num_edges);
+    // add edges in batch
+    cout << "add edges in batch" << endl;
+    startTime = std::chrono::high_resolution_clock::now();
+    for (uint64_t i = 0; i < num_edges; i++) {
+        auto idx = perm[i];
+        a = srcs[idx];
+        b = dests[idx];
+        lsmtree->addEdge(a, b);
+    }
+    endTime = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    cout << "Time of adding edges in batch in the graph:" << duration.count() << endl;
+
+    std::vector<std::string> test_ids = {"BFS"};
+    size_t rounds = P.getOptionLongValue("-rounds", 4);
+    // Test the performance of BFS application.
+    for (auto test_id : test_ids) {
+        double total_time = 0.0;
+        for (size_t i = 0; i < rounds; i++) {
+            auto tm = execute_on_lsmtree_graph(lsmtree, P, test_id);
+
+            // std::cout << "RESULT"  << fixed << setprecision(6)
+            std::cout << "\ttest=" << test_id
+                    << "\ttime=" << tm
+                    << "\titeration=" << i << std::endl;
+            total_time += tm;
+        }
+        // std::cout << "RESULT (AVG)" << fixed << setprecision(6)
+        std::cout << "AVG"
+            << "\ttest=" << test_id
+            << "\ttime=" << (total_time / rounds)
+            << "\tgraph=" << fileName << std::endl;
+    }
+    delete lsmtree;
+}
+
 int main(int argc, char** argv) {
     cout << "hello db" << endl;
     //string fileName = "partOfsocLiveJournal1.txt";
@@ -18,9 +126,6 @@ int main(int argc, char** argv) {
 
     InitGraphFile initGraphFile(fileName.c_str());
 
-    uint a, b;
-    subGraph sg;
-    int cnt = 0;
     std::string dirPath = "tmp";
     if (directoryExists(dirPath)) {
 	if(std::system(("rm -r " + dirPath).c_str()) == 0) {
@@ -36,75 +141,14 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
         return 1;
     }
-    int edgeNum = 0;
-    std::vector<uint32_t> srcs;
-    std::vector<uint32_t> dests;
-    int maxVertexId = 0;
-    LSMTree *lsmtree = new LSMTree(dirPath);
-    while (initGraphFile.getLine(a, b)) {
-        // cout << "a" << a << " b" << b << endl;
-        edgeNum = sg.addEdge(a, b);
-
-        lsmtree->addEdge(a, b);
-        srcs.push_back(a);
-        dests.push_back(b);
-        if (edgeNum % 1000000 == 0) {
-            cout << "edgeNum:" << edgeNum << endl;
-        }
-        if (edgeNum >= MAX_EDGE_NUM) {
-            break;
-        }
-    }
-    lsmtree->convertToCSR();
-    maxVertexId = a;
-    cout << "maxVertexId:" << maxVertexId << endl;
-    sg.setOutDegree();
-    cout << "edgeNum:" << edgeNum << endl;
-    // sg.printSubgraph();
-    //string nameTmp = dirPath + "/l" + to_string(0);
-    //sg.serializeAndAppendBinToDisk(nameTmp);
-    //sg.clearSubgraph();
-    //sg.deserialize(nameTmp);
-    //sg.printSubgraph();
-
+    
     commandLine P(argc, argv, "./graph_bm [-r rounds] [-src \
             a source vertex to run the BFS from] [-type 0: in_memory_graph, 1: lsm_tree_graph]");
-    uint64_t num_edges = sg.edgeNum;
-    auto perm = get_random_permutation(num_edges);
-
-    // // add edges in batch
-    // cout << "add edges in batch" << endl;
-    // for (uint64_t i = 0; i < num_edges; i++) {
-    //     auto idx = perm[i];
-    //     //sg.addEdge(srcs[idx], dests[idx]);
-    //     lsmtree->addEdge(a, b);
-    // }
-
-    cout << "Second convert" << std::endl;
-    lsmtree->convertToCSR();
-    std::vector<std::string> test_ids = {"BFS"};
-    size_t rounds = P.getOptionLongValue("-rounds", 4);
     int type = P.getOptionLongValue("-type", 0);
-    // Skip BFS application currently
-
-    // Test the performance of BFS application.
-    for (auto test_id : test_ids) {
-        double total_time = 0.0;
-        for (size_t i = 0; i < rounds; i++) {
-            auto tm = execute(sg, P, test_id, lsmtree, type);
-
-            // std::cout << "RESULT"  << fixed << setprecision(6)
-            std::cout << "\ttest=" << test_id
-                    << "\ttime=" << tm
-                    << "\titeration=" << i << std::endl;
-            total_time += tm;
-        }
-        // std::cout << "RESULT (AVG)" << fixed << setprecision(6)
-        std::cout << "AVG"
-            << "\ttest=" << test_id
-            << "\ttime=" << (total_time / rounds)
-            << "\tgraph=" << fileName << std::endl;
+    if (type == 0) {
+        test_in_memory_graph(fileName, P);
+    } else if (type == 1) {
+        test_lsm_tree_graph(fileName, P, dirPath);
     }
-    delete lsmtree;
     return 0;
 }
