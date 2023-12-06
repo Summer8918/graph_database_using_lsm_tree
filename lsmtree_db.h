@@ -455,7 +455,7 @@ public:
         }
       }
 #ifdef ENABLE_DEBUG
-      cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+      //cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
 #endif
     }
   }
@@ -522,6 +522,7 @@ public:
               }
             }
           }
+          delete graph;
         }
       }
 #ifdef ENABLE_DEBUG

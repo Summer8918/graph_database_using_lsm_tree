@@ -51,6 +51,6 @@ int main() {
         std::cout << a_2 << " ";
     }
     std::cout << std::endl;
-
+    delete mem;
     return 0;
 }
