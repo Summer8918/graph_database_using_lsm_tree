@@ -453,6 +453,7 @@ public:
             }
           }
         }
+        delete graph;
       }
 #ifdef ENABLE_DEBUG
       //cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
