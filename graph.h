@@ -34,6 +34,7 @@ public:
     graphHeader header;
     vector<int> outNeighbors;
     uint64_t edgeNum;
+    bool deserialized_nghbrs_ = false;
 
     subGraph() {
         edgeNum = 0;
@@ -361,25 +362,39 @@ public:
             }
         }
         delete filePtr;
+        deserialized_nghbrs_ = true;
         // cout << "Deserialize success" << endl;
         // printSubgraph();
     }
 
     // Todo: when the vertexes is sorted according to id, use binary search.
     int search(uint targetId) {
-        //cout << "targetId:" << targetId << endl;
-        for (int i = 0; i < vertexes.size(); i++) {
-            //cout << "id" << vertexes[i].id << endl;
-            if (vertexes[i].id == targetId) {
-                return i;
-            }
-        }
-        return -1;
-        /*
-        int lo = 0, hi = MAX_VERTEX_ID, mid = 0;
+        int lo = 0, hi = vertexes.size() -1, mid = 0;
+        // cout << “Doing search ” << targetId << endl;
         while (lo <= hi) {
             mid = lo + (hi - lo) / 2;
-            cout << "id:" << vertexes[mid].id << endl;
+            if (vertexes[mid].id == targetId) {
+                return mid;
+            }
+            if (vertexes[mid].id < targetId) {
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        //cout << "targetId:" << targetId << endl;
+        // for (int i = 0; i < vertexes.size(); i++) {
+        //     //cout << "id" << vertexes[i].id << endl;
+        //     if (vertexes[i].id == targetId) {
+        //         return i;
+        //     }
+        // }
+        // cout << “Done search ” << targetId << endl;
+        return -1;
+        /*
+        while (lo <= hi) {
+            mid = lo + (hi - lo) / 2;
+            cout << “id:” << vertexes[mid].id << endl;
             if (vertexes[mid].id == targetId) {
                 return mid;
             } else if (vertexes[mid].id < targetId) {
@@ -389,9 +404,8 @@ public:
             }
         }
         */
-        return -1;
+        // return -1;
     }
-
     bool getAllNeighbors(int idx, vector<uint> &neighbors) {
         //int idx = search(targetId);
         if (idx == -1) {
@@ -399,9 +413,9 @@ public:
             return false;
         }
         int neighborNum = vertexes[idx].outDegree;
-#ifdef ENABLE_DEBUG
-        cout << neighborNum << " " << idx << std::endl;
-#endif
+
+        // cout << neighborNum << " " << idx << std::endl;
+
         //vector<uint> new_vect(neighborNum);
         //cout << "idx:" << idx << " neighborNum:" << neighborNum << endl;
         //neighbors.resize(neighborNum);

@@ -118,20 +118,24 @@ subGraph* mergeGraphsV2(const subGraph &G1, const subGraph & G2) {
         uint id1 = G1.vertexes[p1].id;
         uint id2 = G2.vertexes[p2].id;
         if (id1 < id2) {
+            offset = newGraph->outNeighbors.size();
             newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
                 G1.outNeighbors.begin() + G1.vertexes[p1].offset,
                 G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
-            offset = newGraph->outNeighbors.size();
-            tmp = G1.vertexes[p1];
+            // tmp = G1.vertexes[p1];
+            tmp.id = G1.vertexes[p1].id;
+            tmp.outDegree = G1.vertexes[p1].outDegree;
             tmp.offset = offset;
             newGraph->vertexes.push_back(tmp);
             p1++;
         } else if (id1 > id2) {
+            offset = newGraph->outNeighbors.size();
             newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
                 G2.outNeighbors.begin() + G2.vertexes[p2].offset,
                 G2.outNeighbors.begin() + G2.vertexes[p2].offset + G2.vertexes[p2].outDegree);
-            offset = newGraph->outNeighbors.size();
-            tmp = G2.vertexes[p2];
+            // tmp = G2.vertexes[p2];
+            tmp.id = G2.vertexes[p2].id;
+            tmp.outDegree = G2.vertexes[p2].outDegree;
             tmp.offset = offset;
             newGraph->vertexes.push_back(tmp);
             p2++;
@@ -147,11 +151,11 @@ subGraph* mergeGraphsV2(const subGraph &G1, const subGraph & G2) {
                     newNeighbors.push_back(G2.outNeighbors[i]);
                 }
             }
+            offset = newGraph->outNeighbors.size();
             newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
                     newNeighbors.begin(), newNeighbors.end());
             p1++;
             p2++;
-            offset = newGraph->outNeighbors.size();
             tmp.offset = offset;
             tmp.outDegree = newNeighbors.size();
             tmp.id = id1;
@@ -159,22 +163,26 @@ subGraph* mergeGraphsV2(const subGraph &G1, const subGraph & G2) {
         }
     }
     while (p1 < len1) {
+        offset = newGraph->outNeighbors.size();
         newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
                 G1.outNeighbors.begin() + G1.vertexes[p1].offset,
                 G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
-        offset = newGraph->outNeighbors.size();
-        tmp = G1.vertexes[p1];
+        // tmp = G1.vertexes[p1];
+        tmp.id = G1.vertexes[p1].id;
+        tmp.outDegree = G1.vertexes[p1].outDegree;
         tmp.offset = offset;
         newGraph->vertexes.push_back(tmp);
         p1++;
     }
 
     while (p2 < len2) {
+        offset = newGraph->outNeighbors.size();
         newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
                 G2.outNeighbors.begin() + G2.vertexes[p2].offset,
                 G2.outNeighbors.begin() + G2.vertexes[p2].offset + G2.vertexes[p2].outDegree);
-        offset = newGraph->outNeighbors.size();
-        tmp = G2.vertexes[p2];
+        // tmp = G2.vertexes[p2];
+        tmp.id = G2.vertexes[p2].id;
+        tmp.outDegree = G2.vertexes[p2].outDegree;
         tmp.offset = offset;
         newGraph->vertexes.push_back(tmp);
         p2++;

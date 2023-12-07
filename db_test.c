@@ -83,24 +83,25 @@ void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
     cout << "Time to construct the graph:" << duration.count() << endl;
+    cout << "Total edges added = " << num_edges << endl;
     cout << "Show the file sizes of each level" << endl;
     lsmtree->getFileSizeInEachLevel();
 
-    auto perm = get_random_permutation(num_edges);
-    // add edges in batch
-    cout << "add edges in batch" << endl;
-    startTime = std::chrono::high_resolution_clock::now();
-    for (uint64_t i = 0; i < num_edges; i++) {
-        auto idx = perm[i];
-        a = srcs[idx];
-        b = dests[idx];
-        lsmtree->addEdge(a, b);
-    }
-    endTime = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-    cout << "Time of adding edges in batch in the graph:" << duration.count() << endl;
-    cout << "Show the file sizes of each level" << endl;
-    lsmtree->getFileSizeInEachLevel();
+    // auto perm = get_random_permutation(num_edges);
+    // // add edges in batch
+    // cout << "add edges in batch" << endl;
+    // startTime = std::chrono::high_resolution_clock::now();
+    // for (uint64_t i = 0; i < num_edges; i++) {
+    //     auto idx = perm[i];
+    //     a = srcs[idx];
+    //     b = dests[idx];
+    //     lsmtree->addEdge(a, b);
+    // }
+    // endTime = std::chrono::high_resolution_clock::now();
+    // duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    // cout << "Time of adding edges in batch in the graph:" << duration.count() << endl;
+    // cout << "Show the file sizes of each level" << endl;
+    // lsmtree->getFileSizeInEachLevel();
 
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);
@@ -127,7 +128,7 @@ void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
 
 int main(int argc, char** argv) {
     cout << "hello db" << endl;
-    //string fileName = "partOfsocLiveJournal1.txt";
+    // string fileName = "partOfsocLiveJournal1.txt";
     string fileName = "soc-LiveJournal1.txt";
 
     InitGraphFile initGraphFile(fileName.c_str());

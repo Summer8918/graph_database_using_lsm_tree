@@ -14,7 +14,7 @@ using namespace std;
 #define LEVEL_0_CSR_FILE_NUM 1
 #define MULTIPLE_BETWEEN_LEVEL 10
 #define MAX_LEVEL_NUM 7
-#define ENABLE_DEBUG 1
+//#define ENABLE_DEBUG 1
 
 struct commandLine {
     int argc;
@@ -423,7 +423,7 @@ public:
 
   }
 
-  void bfs(uint src) {
+  void new_bfs(uint src) {
     cout << "test bfs in LSM-tree" << endl;
     bitset<MAX_VERTEX_ID + 1> visitedBitMap;
     visitedBitMap.reset();
@@ -471,7 +471,7 @@ public:
         subGraph *graph = new subGraph;;
         graph->deserialize_vertex(lsmtreeOnDiskData[i].front().fileName);
         int index = graph->search(id);
-        if(id != -1) {
+        if(index != -1) {
           graph->deserialize_nghbr(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
           vector<uint> graph_neighbors(graph->vertexes[index].outDegree);
           graph->getAllNeighbors(index, graph_neighbors);
@@ -495,7 +495,7 @@ public:
     }
   }
 
-  void old_bfs(uint src) {
+  void bfs(uint src) {
     cout << "test bfs in LSM-tree" << endl;
     bitset<MAX_VERTEX_ID + 1> visitedBitMap;
     visitedBitMap.reset();
@@ -536,29 +536,49 @@ public:
 #endif
           continue;
         }
-        // cout << "Bfs on level:" << i << endl;
+        // cout << "Bfs on level:" << i << " sstables= " << lsmtreeOnDiskData[i].size() << endl;
+        subGraph *graph = new subGraph;;
+        graph->deserialize_vertex(lsmtreeOnDiskData[i].front().fileName);
         q2 = q1;
         for (int j = q2.size(); j > 0; j--) {
           uint id = q2.front();
           //cout << "BFS visited id" << id << endl;
           q2.pop();
-          subGraph *graph = new subGraph;;
-          graph->deserialize(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
           int index = graph->search(id);
-          if(id != -1) {
+          // graph->deserialize(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
+          // int index = graph->search(id);
+          // if (index == -1) {
+          //   cout << "Was not found " << id << endl;
+          // }
+          if(index != -1) {
+            // cout << "Was found " << id << " " << index << endl;
+            if (!graph->deserialized_nghbrs_) {
+              graph->deserialize_nghbr(lsmtreeOnDiskData[i].front().fileName, lsmtreeOnDiskData[i].front().nghbr_fileName);
+            }
             vector<uint> graph_neighbors(graph->vertexes[index].outDegree);
+            // cout << "Neighbors size " << graph_neighbors.size() << endl;
             graph->getAllNeighbors(index, graph_neighbors);
-            //cout << "Neighbors size" << graph_neighbors.size() << endl;
+            // cout << "Neighbors size" << graph_neighbors.size() << " " << id << endl;
+            // int tmp_id = -1;
             for (auto & neighbor : graph_neighbors) {
+              // if (id == 141011) {
+              //     cout << "Check visited " << neighbor << endl; 
+              //     tmp_id++;
+              // }
               if (!visitedBitMap[neighbor]) {
+                // if (id == 141011)
+                //   cout << "Adding nghbr " << neighbor << " " << tmp_id << endl; 
                 visitedBitMap.set(neighbor);
                 q.push(neighbor);
                 visitedNodes++;
+                // if (id == 141011)
+                //   cout << "Added " << neighbor << " " << tmp_id << endl; 
               }
             }
+            // cout << ""
           }
-          delete graph;
         }
+        delete graph;
       }
 #ifdef ENABLE_DEBUG
       cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
@@ -604,7 +624,7 @@ void test_bfs_on_in_memory_graph(subGraph& G, commandLine& P) {
       cout << "visitedNeighborNum:" << visitedNeighborNum << endl;
     }
     int index = G.search(id);
-    if(id != -1){
+    if(index != -1){
       int numNeighbor = G.vertexes[index].outDegree;
       vector<uint> neighbors(numNeighbor);
       G.getAllNeighbors(index, neighbors);
