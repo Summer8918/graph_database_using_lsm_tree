@@ -159,6 +159,22 @@ struct FileMetaData {
   void printDebugInfo() {
     cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
         << " maxNodeId" << maxNodeId << " edgeNum" << edgeNum << endl;
+
+    std::ifstream file(fileName, std::ios::binary | std::ios::ate);
+    // Check if the file is open
+    if (!file.is_open()) {
+        std::cerr << "Failed to open the file." << std::endl;
+        return;
+    }
+    
+    // Get the file size
+    std::streampos fileSize = file.tellg();
+
+    // Print the file size
+    std::cout << "File size: " << fileSize / (1024 * 1024) << " MB" << std::endl;
+
+    // Close the file
+    file.close();
   }
 };
 
@@ -376,10 +392,19 @@ public:
 #endif
   }
 
-  void debugInfo() {
+  // void debugInfo() {
+  //   for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
+  //     if (!lsmtreeOnDiskData[i].empty()) {
+  //       cout << "Files in level i:" << i << endl;
+  //       lsmtreeOnDiskData[i].front().printDebugInfo();
+  //     }
+  //   }
+  // }
+
+  void getFileSizeInEachLevel(void) {
     for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
       if (!lsmtreeOnDiskData[i].empty()) {
-        cout << "Files in level i:" << i << endl;
+        cout << "level:" << i << endl;
         lsmtreeOnDiskData[i].front().printDebugInfo();
       }
     }

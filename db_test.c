@@ -78,6 +78,9 @@ void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
             break;
         }
     }
+    cout << "Show the file sizes of each level" << endl;
+    lsmtree->getFileSizeInEachLevel();
+
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
     cout << "Time to construct the graph:" << duration.count() << endl;

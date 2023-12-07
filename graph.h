@@ -367,7 +367,6 @@ public:
 
     // Todo: when the vertexes is sorted according to id, use binary search.
     int search(uint targetId) {
-        int lo = 0, hi = MAX_VERTEX_ID, mid = 0;
         //cout << "targetId:" << targetId << endl;
         for (int i = 0; i < vertexes.size(); i++) {
             //cout << "id" << vertexes[i].id << endl;
@@ -377,6 +376,7 @@ public:
         }
         return -1;
         /*
+        int lo = 0, hi = MAX_VERTEX_ID, mid = 0;
         while (lo <= hi) {
             mid = lo + (hi - lo) / 2;
             cout << "id:" << vertexes[mid].id << endl;
