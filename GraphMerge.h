@@ -54,46 +54,33 @@ subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
             G1.outNeighbors.begin() + v.offset + v.outDegree);
     }
 
-    // Parallelize the merging of vertices from G2
-    #pragma omp parallel for
     for (size_t i = 0; i < G2.vertexes.size(); ++i) {
         const auto& v = G2.vertexes[i];
         auto it = vertexMapping.find(v.id);
         if (it != vertexMapping.end()) {
-            // Handle overlapping vertices
             node& existingNode = newGraph->vertexes[it->second];
             std::unordered_set<uintT> uniqueNeighbors;
             
-            // Add existing neighbors from newGraph
             for (size_t j = existingNode.offset; j < existingNode.offset + existingNode.outDegree; ++j) {
                 uniqueNeighbors.insert(newGraph->outNeighbors[j]);
             }
 
-            // Add neighbors from G2
             for (size_t j = 0; j < v.outDegree; ++j) {
                 uniqueNeighbors.insert(G2.outNeighbors[v.offset + j]);
             }
 
-            #pragma omp critical
-            {
-                // Update the existing node's offset and outDegree
-                existingNode.offset = newGraph->outNeighbors.size();
-                existingNode.outDegree = uniqueNeighbors.size();
+            existingNode.offset = newGraph->outNeighbors.size();
+            existingNode.outDegree = uniqueNeighbors.size();
 
-                // Add unique neighbors to newGraph's outNeighbors
-                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), uniqueNeighbors.begin(), uniqueNeighbors.end());
-            }
+            newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), uniqueNeighbors.begin(), uniqueNeighbors.end());
         } else {
-            // Handle unique vertices
             node newNode = v;
             newNode.offset = newGraph->outNeighbors.size();
             std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + v.offset, G2.outNeighbors.begin() + v.offset + v.outDegree);
-            #pragma omp critical
-            {
-                newGraph->vertexes.push_back(newNode);
-                vertexMapping[v.id] = newGraph->vertexes.size() - 1;
-                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
-            }
+
+            newGraph->vertexes.push_back(newNode);
+            vertexMapping[v.id] = newGraph->vertexes.size() - 1;
+            newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
         }
     }
 
