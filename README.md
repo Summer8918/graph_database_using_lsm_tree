@@ -32,6 +32,9 @@ The first 10 lines of soc-LiveJournal1.txt is shown as below:
 
 # Test of the Database
 ./db_test -src 87 -type 1 -rounds 4
+
 use -src to indicate the start source of BFS application
+
 use -type to designate test type: lsm_tree_graph(in memory graph database) or lsm_tree_graph(lsm tree graph database)
+
 use -rounds to indicate the rounds of test BFS application
