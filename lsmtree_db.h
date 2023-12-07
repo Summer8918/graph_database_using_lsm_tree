@@ -163,17 +163,25 @@ struct FileMetaData {
     std::ifstream file(fileName, std::ios::binary | std::ios::ate);
     // Check if the file is open
     if (!file.is_open()) {
-        std::cerr << "Failed to open the file." << std::endl;
+        std::cerr << "Failed to open the vertexes file." << std::endl;
         return;
     }
     
-    // Get the file size
     std::streampos fileSize = file.tellg();
 
-    // Print the file size
-    std::cout << "File size: " << fileSize / (1024 * 1024) << " MB" << std::endl;
+    std::cout << "Vertexes File size: " << fileSize / (1024) << " kB" << std::endl;
+    file.close();
 
-    // Close the file
+    std::ifstream neighborFile(nghbr_fileName, std::ios::binary | std::ios::ate);
+    // Check if the file is open
+    if (!neighborFile.is_open()) {
+        std::cerr << "Failed to open the neighbors file." << std::endl;
+        return;
+    }
+    
+    fileSize = neighborFile.tellg();
+
+    std::cout << "Neighbor File size: " << fileSize / (1024) << " kB" << std::endl;
     file.close();
   }
 };
@@ -301,6 +309,8 @@ public:
     //graph->printSubgraph();
 
     delete graph;
+    // cout << "After convert a memtable to CSR" << endl;
+    // getFileSizeInEachLevel();
     mayScheduleMerge();
   }
 
@@ -316,11 +326,11 @@ public:
       //cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
       //      << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
-        //cout << "defore merge:" << endl;
-        //debugInfo();
+        // cout << "defore merge:" << endl;
+        // getFileSizeInEachLevel();
         implMerge(i, i+1);
-        //cout << "after merge:" << endl;
-        //debugInfo();
+        // cout << "after merge:" << endl;
+        // getFileSizeInEachLevel();
       }
     }
   }
