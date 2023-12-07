@@ -1,6 +1,7 @@
 # graph database using lsm tree
 
 ## Compilation
+
 compliers: g++
 
 compile command: make
@@ -8,9 +9,10 @@ compile command: make
 clean compile files: make clean
 
 ## Initialization of graph
+
 The graph is initialize with input file(soc-LiveJournal1.txt.gz) download from https://snap.stanford.edu/data/soc-LiveJournal1.html.
 
-The soc-LiveJournal1.txt.gz is too large to be uploaded to github, you can downlowd it from above website.
+The soc-LiveJournal1.txt.gz is too large to be uploaded to GitHub; therefore, it is advised to use the link above for the download in order to get expected results on the full graph.
 
 The first 10 lines of soc-LiveJournal1.txt is shown as below:
 ```
@@ -30,7 +32,15 @@ The first 10 lines of soc-LiveJournal1.txt is shown as below:
 0	10
 ```
 
+The text file partOfsocLiveJournal1.txt can be used as a temporary dataset for faster testing. It consists of a part of soc-LiveJournal1.txt data.
+
+graphFile.txt is the same as partOfsocLiveJournal1.txt but without headers.
+
+convertedGraph.txt is an adjacency graph made from graphFile.txt using SNAPtoAdj function of LIGRA network.
+
+
 # Test of the Database
+
 ./db_test -src 87 -type 1 -rounds 4
 
 use -src to indicate the start source of BFS application
