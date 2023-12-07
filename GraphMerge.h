@@ -40,57 +40,68 @@ subGraph convertToCSR(const DiaGraph& adjListGraph) {
 
 // Merge function for two CSR graphs that handles overlapping vertices
 subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
+    std::unordered_map<uintT, size_t> vertexMapping;
     subGraph *newGraph = new subGraph;
     newGraph->vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
     newGraph->outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
 
-    std::unordered_map<uintT, size_t> vertexMapping;
-    for (const auto& v : G1.vertexes) {
-        newGraph->vertexes.push_back(v);
-        vertexMapping[v.id] = newGraph->vertexes.size() - 1;
-        auto startIdx = newGraph->outNeighbors.size();
-        auto endIdx = startIdx + v.outDegree;
-        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(),
-                                      G1.outNeighbors.begin() + v.offset,
-                                      G1.outNeighbors.begin() + v.offset + v.outDegree);
-        std::sort(newGraph->outNeighbors.begin() + startIdx, newGraph->outNeighbors.begin() + endIdx);
+    // Merging vertices from G1
+    for (const auto& vertex : G1.vertexes) {
+        newGraph->vertexes.push_back(vertex);
+        vertexMapping[vertex.id] = newGraph->vertexes.size() - 1;
+        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                                      G1.outNeighbors.begin() + vertex.offset, 
+                                      G1.outNeighbors.begin() + vertex.offset + vertex.outDegree);
     }
 
-    for (size_t i = 0; i < G2.vertexes.size(); ++i) {
-        const auto& v = G2.vertexes[i];
-        auto it = vertexMapping.find(v.id);
+    // Merging vertices from G2
+    for (const auto& vertex : G2.vertexes) {
+        auto it = vertexMapping.find(vertex.id);
         if (it != vertexMapping.end()) {
             // Handle overlapping vertices
             node& existingNode = newGraph->vertexes[it->second];
             std::vector<uintT> uniqueNeighbors(newGraph->outNeighbors.begin() + existingNode.offset,
                                                newGraph->outNeighbors.begin() + existingNode.offset + existingNode.outDegree);
 
-            // Add neighbors from G2 and sort them
             uniqueNeighbors.insert(uniqueNeighbors.end(),
-                                   G2.outNeighbors.begin() + v.offset,
-                                   G2.outNeighbors.begin() + v.offset + v.outDegree);
+                                   G2.outNeighbors.begin() + vertex.offset,
+                                   G2.outNeighbors.begin() + vertex.offset + vertex.outDegree);
+
             std::sort(uniqueNeighbors.begin(), uniqueNeighbors.end());
             uniqueNeighbors.erase(std::unique(uniqueNeighbors.begin(), uniqueNeighbors.end()), uniqueNeighbors.end());
 
-            // Update the existing node's offset and outDegree
             existingNode.offset = newGraph->outNeighbors.size();
             existingNode.outDegree = uniqueNeighbors.size();
             newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), uniqueNeighbors.begin(), uniqueNeighbors.end());
         } else {
             // Handle unique vertices
-            node newNode = v;
+            node newNode = vertex;
             newNode.offset = newGraph->outNeighbors.size();
-            std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + v.offset, G2.outNeighbors.begin() + v.offset + v.outDegree);
+            std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + vertex.offset, 
+                                             G2.outNeighbors.begin() + vertex.offset + vertex.outDegree);
             std::sort(tempNeighbors.begin(), tempNeighbors.end());
+
             newGraph->vertexes.push_back(newNode);
-            vertexMapping[v.id] = newGraph->vertexes.size() - 1;
+            vertexMapping[vertex.id] = newGraph->vertexes.size() - 1;
             newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
         }
+    }
+
+    // Sort the vertices in newGraph by their IDs
+    std::sort(newGraph->vertexes.begin(), newGraph->vertexes.end(), 
+              [](const node& a, const node& b) { return a.id < b.id; });
+
+    // Update vertex offsets after sorting
+    size_t offset = 0;
+    for (auto& vertex : newGraph->vertexes) {
+        vertex.offset = offset;
+        offset += vertex.outDegree;
     }
 
     newGraph->header.vertexNum = newGraph->vertexes.size();
     newGraph->header.outNeighborNum = newGraph->outNeighbors.size();
     newGraph->edgeNum = newGraph->header.outNeighborNum;
+
     return newGraph;
 }
 
