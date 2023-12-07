@@ -106,6 +106,87 @@ subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
 }
 
 
+// Merge function for two CSR graphs that handles overlapping vertices
+subGraph* mergeGraphsV2(const subGraph &G1, const subGraph & G2) {
+    subGraph *newGraph = new subGraph;
+    int len1 = G1.vertexes.size();
+    int len2 = G2.vertexes.size();
+    int p1 = 0, p2 = 0;
+    uint offset = 0;
+    node tmp;
+    while (p1 < len1 && p1 < len2) {
+        uint id1 = G1.vertexes[p1].id;
+        uint id2 = G2.vertexes[p2].id;
+        if (id1 < id2) {
+            newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset,
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
+            offset = newGraph->outNeighbors.size();
+            tmp = G1.vertexes[p1];
+            tmp.offset = offset;
+            newGraph->vertexes.push_back(tmp);
+            p1++;
+        } else if (id1 > id2) {
+            newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                G2.outNeighbors.begin() + G2.vertexes[p2].offset,
+                G2.outNeighbors.begin() + G2.vertexes[p2].offset + G2.vertexes[p2].outDegree);
+            offset = newGraph->outNeighbors.size();
+            tmp = G2.vertexes[p2];
+            tmp.offset = offset;
+            newGraph->vertexes.push_back(tmp);
+            p2++;
+        } else {
+            vector<uint> newNeighbors(G1.outNeighbors.begin() + G1.vertexes[p1].offset,
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
+            std::unordered_set<uintT> uniqueNeighbors(G1.outNeighbors.begin() + G1.vertexes[p1].offset,
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
+
+            int len = G2.vertexes[p2].offset + G2.vertexes[p2].outDegree;
+            for (int i = G2.vertexes[p2].offset; i < len; i++) {
+                if (uniqueNeighbors.find(G2.outNeighbors[i]) == uniqueNeighbors.end()) {
+                    newNeighbors.push_back(G2.outNeighbors[i]);
+                }
+            }
+            newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                    newNeighbors.begin(), newNeighbors.end());
+            p1++;
+            p2++;
+            offset = newGraph->outNeighbors.size();
+            tmp.offset = offset;
+            tmp.outDegree = newNeighbors.size();
+            tmp.id = id1;
+            newGraph->vertexes.push_back(tmp);
+        }
+    }
+    while (p1 < len1) {
+        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset,
+                G1.outNeighbors.begin() + G1.vertexes[p1].offset + G1.vertexes[p1].outDegree);
+        offset = newGraph->outNeighbors.size();
+        tmp = G1.vertexes[p1];
+        tmp.offset = offset;
+        newGraph->vertexes.push_back(tmp);
+        p1++;
+    }
+
+    while (p2 < len2) {
+        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), 
+                G2.outNeighbors.begin() + G2.vertexes[p2].offset,
+                G2.outNeighbors.begin() + G2.vertexes[p2].offset + G2.vertexes[p2].outDegree);
+        offset = newGraph->outNeighbors.size();
+        tmp = G2.vertexes[p2];
+        tmp.offset = offset;
+        newGraph->vertexes.push_back(tmp);
+        p2++;
+    }
+
+    //newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
+    newGraph->header.vertexNum = newGraph->vertexes.size();
+    newGraph->header.outNeighborNum = newGraph->outNeighbors.size();
+    newGraph->edgeNum = newGraph->header.outNeighborNum;
+    return newGraph;
+}
+
 // Utility function to print CSR graph
 void printCSRGraph(const subGraph& csrGraph) {
     cout << "CSR Graph:" << endl;

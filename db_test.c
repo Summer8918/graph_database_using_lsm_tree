@@ -78,12 +78,13 @@ void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
             break;
         }
     }
-    cout << "Show the file sizes of each level" << endl;
-    lsmtree->getFileSizeInEachLevel();
+
 
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
     cout << "Time to construct the graph:" << duration.count() << endl;
+    cout << "Show the file sizes of each level" << endl;
+    lsmtree->getFileSizeInEachLevel();
 
     auto perm = get_random_permutation(num_edges);
     // add edges in batch
@@ -98,6 +99,8 @@ void test_lsm_tree_graph(string &fileName, commandLine &P, string &dirPath) {
     endTime = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
     cout << "Time of adding edges in batch in the graph:" << duration.count() << endl;
+    cout << "Show the file sizes of each level" << endl;
+    lsmtree->getFileSizeInEachLevel();
 
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);

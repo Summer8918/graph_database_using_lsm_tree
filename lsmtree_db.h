@@ -157,8 +157,7 @@ struct FileMetaData {
   uint maxNodeId;
   uint edgeNum;
   void printDebugInfo() {
-    cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
-        << " maxNodeId" << maxNodeId << " edgeNum" << edgeNum << endl;
+    cout << "fileName:" << fileName << " edgeNum" << edgeNum << endl;
 
     std::ifstream file(fileName, std::ios::binary | std::ios::ate);
     // Check if the file is open
@@ -367,7 +366,7 @@ public:
 
     gA->deserialize(fa.fileName, fa.nghbr_fileName);
     gB->deserialize(fb.fileName, fb.nghbr_fileName);
-    subGraph *mergedGraph = mergeGraphs(*gA, *gB); // Merge operation
+    subGraph *mergedGraph = mergeGraphsV2(*gA, *gB); // Merge operation
 
     //cout << "---gA----" << endl;
     //gA->printSubgraph();
