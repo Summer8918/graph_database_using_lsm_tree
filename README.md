@@ -10,7 +10,7 @@ clean compile files: make clean
 
 ## Initialization of graph
 
-The graph is initialize with input file(soc-LiveJournal1.txt.gz) download from https://snap.stanford.edu/data/soc-LiveJournal1.html.
+The graph is initialized with input file (soc-LiveJournal1.txt.gz) downloaded from https://snap.stanford.edu/data/soc-LiveJournal1.html.
 
 The soc-LiveJournal1.txt.gz is too large to be uploaded to GitHub; therefore, it is advised to use the link above for the download in order to get expected results on the full graph.
 
