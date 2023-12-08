@@ -75,9 +75,9 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
     vector<uint> neighborsA, neighborsB;
     Graph *gA = new Graph(0);
     Graph *gB = new Graph(0);
-    cout << "Merge two files" << endl;
-    fA.printDebugInfo();
-    fB.printDebugInfo();
+    // cout << "Merge two files" << endl;
+    // fA.printDebugInfo();
+    // fB.printDebugInfo();
     node na, nb;
     bool graph_a_flag = gA->readFileFromStart(na, neighborsA, fA.fileName, 
             fA.vertexNum, fA.edgeNum, fA.minNodeId, fA.maxNodeId);
@@ -92,7 +92,7 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
 
     uint preId = 0;
     while (graph_a_flag == true && graph_b_flag == true) {
-        cout << "na id:" << na.id << " nb id:" << nb.id << endl;
+        // cout << "na id:" << na.id << " nb id:" << nb.id << endl;
         if (na.id == nb.id) {
             unordered_set<uint> neighborsSet(neighborsA.begin(), neighborsA.end());
             // cout << "neighborsA.size()" << neighborsA.size() << endl;
@@ -190,8 +190,8 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
         abort();
     }
     //validate(fM);
-    cout << "External merge file success!" << endl;
-    fM.printDebugInfo();
+    // cout << "External merge file success!" << endl;
+    // fM.printDebugInfo();
     delete gOutput;
 }
 

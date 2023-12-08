@@ -139,7 +139,7 @@ public:
         outputFile.flush();
         vertexes.clear();  //caution!
         outNeighbors.clear();   //caution!
-        cout << "flushToDisk success" << endl;
+        // cout << "flushToDisk success" << endl;
     }
 
     // reach end, return false;
@@ -151,7 +151,7 @@ public:
         //     maxId << endl;
         // read to the end
         if (vertexCnt >= vertex_num) {
-            cout << "read to end" << endl;
+            // cout << "read to end" << endl;
             return false;
         }
         if (posV == vertexes.size()) {
@@ -193,7 +193,7 @@ public:
                 //cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
                 cnt++;
             }
-            cout << "cnt:" << cnt << endl;
+            // cout << "cnt:" << cnt << endl;
             posV = 0;
             vertexesPtr->close();
             delete vertexesPtr;

@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     std::string dirPath = "tmp";
     if (directoryExists(dirPath)) {
 	if(std::system(("rm -r " + dirPath).c_str()) == 0) {
-            std::cout << "Deleted existing directory: " << dirPath << std::endl;
+            // std::cout << "Deleted existing directory: " << dirPath << std::endl;
         } else {
             std::cerr << "Failed to delete the existing directory: " << dirPath << std::endl;
             abort();
@@ -27,29 +27,6 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create the new directory: " << dirPath << std::endl;
         return 1;
     }
-    // test class Graph begin
-    /*
-    vector<uint> neighbors = {5,6,3,1,2};
-    Graph *graph = new Graph(0);
-    string tmp = "tmp/tmp_file";
-    int vn = 0, on = 0;
-    for (int i = 0; i < 10; i++) {
-        vn++;
-        on += neighbors.size();
-        graph->addVertex(i, neighbors);
-        graph->flushToDisk(tmp);
-        neighbors.push_back(i);
-    }
-    node n;
-    while (graph->readFileFromStart(n, neighbors, tmp, vn, on)) {
-        cout << "vid:" << n.id << " neighbors:" << endl;
-        for (int i = 0; i < neighbors.size(); i++) {
-            cout << neighbors[i] << " ";
-        }
-        cout << endl;
-    }
-    */
-    // test class Graph end
 
     cout << "hello db" << endl;
     string fileName = "soc-LiveJournal1.txt";
@@ -59,6 +36,7 @@ int main(int argc, char** argv) {
     std::vector<uint32_t> srcs;
     std::vector<uint32_t> dests;
 
+    auto startTime = std::chrono::high_resolution_clock::now();
     LSMTree *lsmtree = new LSMTree(dirPath);
     while (initGraphFile.getLine(a, b)) {
         lsmtree->addEdge(a, b);
@@ -69,11 +47,25 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - \
+            startTime);
+    cout << "Time to construct the graph:" << duration.count() << endl;
+
+    // add edges in batch
+    auto perm = get_random_permutation(edgeCnt);
+    cout << "add edges in batch" << endl;
+    startTime = std::chrono::high_resolution_clock::now();
+    for (uint64_t i = 0; i < edgeCnt; i++) {
+        auto idx = perm[i];
+        lsmtree->addEdge(a, b);
+    }
+    endTime = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - \
+            startTime);
+    cout << "Time to update the graph in batch:" << duration.count() << endl;
     return 0;
-
     /*
-
-    
     subGraph sg;
     int cnt = 0;
     
@@ -118,13 +110,7 @@ int main(int argc, char** argv) {
     uint64_t num_edges = sg.edgeNum;
     auto perm = get_random_permutation(num_edges);
 
-    // add edges in batch
-    cout << "add edges in batch" << endl;
-    for (uint64_t i = 0; i < num_edges; i++) {
-        auto idx = perm[i];
-        sg.addEdge(srcs[idx], dests[idx]);
-        lsmtree->addEdge(a, b);
-    }
+    
     lsmtree->convertToCSR();
     std::vector<std::string> test_ids = {"BFS"};
     size_t rounds = P.getOptionLongValue("-rounds", 4);

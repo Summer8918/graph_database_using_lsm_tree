@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define MAX_EDGE_NUM_IN_MEMTABLE 1024
+#define MAX_EDGE_NUM_IN_MEMTABLE 1024 * 1024 * 4
 #define LEVEL_0_CSR_FILE_NUM 1
 #define MULTIPLE_BETWEEN_LEVEL 10
 #define MAX_LEVEL_NUM 7
@@ -186,7 +186,7 @@ public:
 
 void removeFile(string &fileDir) {
   if(std::system(("rm " + fileDir + "o " + fileDir + "v").c_str()) == 0) {
-    std::cout << "Deleted existing directory: " << fileDir << std::endl;
+    // std::cout << "Deleted existing directory: " << fileDir << std::endl;
   } else {
     std::cerr << "Failed to delete the existing directory: " << fileDir + "o " + fileDir + "v" 
         << std::endl;
@@ -204,6 +204,7 @@ public:
 
   LSMTree (string dirPath_) : dirPath (dirPath_) {
     cnt = 0;
+    // caution! difference between resize and reserve
     edgeNumLimitOfLevels.resize(MAX_LEVEL_NUM);
     lsmtreeOnDiskData.resize(MAX_LEVEL_NUM);
     edgeNumLimitOfLevels[0] = (LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE);
@@ -227,7 +228,7 @@ public:
       cout << "memt is empty, no need to convert to csr" << endl;
       return;
     }
-    cout << "convertToCSR" << endl;
+    // cout << "convertToCSR" << endl;
     Graph *graph = new Graph(0);
     int sz = memt.memTable.size();
     uint64_t offset = 0;
@@ -255,7 +256,7 @@ public:
     file.vertexNum = sz;
     assert(lsmtreeOnDiskData[0].empty());
     lsmtreeOnDiskData[0].push_back(file);
-    file.printDebugInfo();
+    // file.printDebugInfo();
     memt.clearMemT();
 
     delete graph;
@@ -272,21 +273,21 @@ public:
       for (auto &f : level) {
         TotalEdgeNum += f.edgeNum;
       }
-      cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
-            << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
+      // cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
+      //       << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
-        cout << "defore merge:" << endl;
-        getFileSizeInEachLevel();
+        // cout << "defore merge:" << endl;
+        // getFileSizeInEachLevel();
         implMerge(i, i+1);
-        cout << "after merge:" << endl;
-        getFileSizeInEachLevel();
+        // cout << "after merge:" << endl;
+        // getFileSizeInEachLevel();
       }
     }
   }
 
   // Do merge operation on CSR file in levela and levelb.
   void implMerge(int levela, int levelb) {
-    cout << "Merging CSR files from Level " << levela << " to Level " << levelb << endl;
+    // cout << "Merging CSR files from Level " << levela << " to Level " << levelb << endl;
 
     // Assuming each level has a list of CSR files
     auto& levelAFiles = lsmtreeOnDiskData[levela];
@@ -297,7 +298,7 @@ public:
 
     // levelb is empty
     if (levelBFiles.empty()) {
-      cout << "levelBFiles is empty " << endl;
+      // cout << "levelBFiles is empty " << endl;
       lsmtreeOnDiskData[levelb].push_back(lsmtreeOnDiskData[levela].front());
       lsmtreeOnDiskData[levela].clear();
       return;
@@ -317,8 +318,8 @@ public:
 
     removeFile(fa.fileName);
     removeFile(fb.fileName);
-    cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
-      << "Merge res:" << fMerged.fileName << endl;
+    // cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
+    //   << "Merge res:" << fMerged.fileName << endl;
   }
 
   void getFileSizeInEachLevel(void) {
@@ -332,132 +333,130 @@ public:
       }
     }
   }
-/*
-  void bfs(uint src) {
-    cout << "test bfs in LSM-tree" << endl;
-    bitset<MAX_VERTEX_ID + 1> visitedBitMap;
-    visitedBitMap.reset();
-    queue<uint> q;
-    q.push(src);
-    visitedBitMap.set(src);
-    vector<uint> neighbors;
-    int visitedNodes = 1;
-    int steps = 0;
-    while (!q.empty()) {
-      queue<uint> q1 = q;
-      queue<uint> q2 = q1;
-      steps++;
-      // Traverse graph in Memtable
-      for (int i = q2.size(); i > 0; i--) {
-        uint id = q2.front();
-        q2.pop();
-        if(memt.getNeighbors(id, neighbors)) {
-          //cout << "Neighbors size" << neighbors.size() << endl;
-          for (auto & neighbor : neighbors) {
-            if (!visitedBitMap[neighbor]) {
-              visitedBitMap.set(neighbor);
-              q.push(neighbor);
-              visitedNodes++;
-            }
-          }
-        }
-      }
 
-      // Traverse graph in each level of LSM-tree
-      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
-        if (lsmtreeOnDiskData[i].empty()) {
-          cout << "skip bfs on level:" << i << endl;
-          continue;
-        }
-        cout << "Bfs on level:" << i << endl;
-        q2 = q1;
-        for (int j = q2.size(); j > 0; j--) {
-          uint id = q2.front();
-          //cout << "BFS visited id" << id << endl;
-          q2.pop();
-          subGraph *graph = new subGraph;;
-          graph->deserialize(lsmtreeOnDiskData[i].front().fileName);
-          if(graph->getAllNeighbors(id, neighbors)) {
-            //cout << "Neighbors size" << neighbors.size() << endl;
-            for (auto & neighbor : neighbors) {
-              if (!visitedBitMap[neighbor]) {
-                visitedBitMap.set(neighbor);
-                q.push(neighbor);
-                visitedNodes++;
-              }
-            }
-          }
-        }
-      }
-      cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
-    }
-  }
-  */
+  // void bfs(uint src) {
+  //   cout << "test bfs in LSM-tree" << endl;
+  //   bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+  //   visitedBitMap.reset();
+  //   queue<uint> q;
+  //   q.push(src);
+  //   visitedBitMap.set(src);
+  //   vector<uint> neighbors;
+  //   int visitedNodes = 1;
+  //   int steps = 0;
+  //   while (!q.empty()) {
+  //     queue<uint> q1 = q;
+  //     queue<uint> q2 = q1;
+  //     steps++;
+  //     // Traverse graph in Memtable
+  //     for (int i = q2.size(); i > 0; i--) {
+  //       uint id = q2.front();
+  //       q2.pop();
+  //       if(memt.getNeighbors(id, neighbors)) {
+  //         //cout << "Neighbors size" << neighbors.size() << endl;
+  //         for (auto & neighbor : neighbors) {
+  //           if (!visitedBitMap[neighbor]) {
+  //             visitedBitMap.set(neighbor);
+  //             q.push(neighbor);
+  //             visitedNodes++;
+  //           }
+  //         }
+  //       }
+  //     }
+
+  //     // Traverse graph in each level of LSM-tree
+  //     for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+  //       if (lsmtreeOnDiskData[i].empty()) {
+  //         cout << "skip bfs on level:" << i << endl;
+  //         continue;
+  //       }
+  //       cout << "Bfs on level:" << i << endl;
+  //       q2 = q1;
+  //       for (int j = q2.size(); j > 0; j--) {
+  //         uint id = q2.front();
+  //         //cout << "BFS visited id" << id << endl;
+  //         q2.pop();
+  //         Graph *graph = new Graph(0);
+  //         graph->deserialize(lsmtreeOnDiskData[i].front().fileName);
+  //         if(graph->getAllNeighbors(id, neighbors)) {
+  //           //cout << "Neighbors size" << neighbors.size() << endl;
+  //           for (auto & neighbor : neighbors) {
+  //             if (!visitedBitMap[neighbor]) {
+  //               visitedBitMap.set(neighbor);
+  //               q.push(neighbor);
+  //               visitedNodes++;
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
+  //   }
+  // }
 };
 
-/*
-void test_bfs(commandLine& P, LSMTree *lsmtree) {
 
-  long src = P.getOptionLongValue("-src", -1);
-  if (src == -1) {
-    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
-    exit(0);
-  }
-  lsmtree->bfs(src);
-}
+// void test_bfs(commandLine& P, LSMTree *lsmtree) {
 
-void test_bfs_on_subGraph(subGraph& G, commandLine& P) {
-  long src = P.getOptionLongValue("-src",-1);
-  if (src == -1) {
-    std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
-    exit(0);
-  }
-  cout << "test bfs on subgraph" << endl;
-  bitset<MAX_VERTEX_ID + 1> visitedBitMap;
-  visitedBitMap.reset();
-  queue<uint> q;
-  q.push(src);
-  visitedBitMap.set(src);
-  vector<uint> neighbors;
-  int visitedNodeNum = 1;
-  int steps = 0;
-  while (!q.empty()) {
-    steps++;
-    for (int i = q.size(); i > 0; i--) {
-      uint id = q.front();
-      //cout << "BFS visited id" << id << endl;
-      q.pop();
-      if(G.getAllNeighbors(id, neighbors)) {
-        //cout << "Neighbors size" << neighbors.size() << endl;
-        for (auto & neighbor : neighbors) {
-          if (!visitedBitMap[neighbor]) {
-            visitedBitMap.set(neighbor);
-            q.push(neighbor);
-            visitedNodeNum++;
-            if (visitedNodeNum % 1000 == 0) {
-              cout << "visitedNodeNum" << visitedNodeNum << endl;
-            }
-          }
-        }
-      }
+//   long src = P.getOptionLongValue("-src", -1);
+//   if (src == -1) {
+//     std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+//     exit(0);
+//   }
+//   lsmtree->bfs(src);
+// }
+
+// long execute(commandLine& P, std::string testname, LSMTree *lsmtree) {
+//   // Record the start time
+//   auto startTime = std::chrono::high_resolution_clock::now();
+//   if (testname == "BFS") {
+//     test_bfs(P, lsmtree);
+//   } else {
+//     std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
+//   }
+//   // Record the end time
+//   auto endTime = std::chrono::high_resolution_clock::now();
+//   // Calculate the duration in microseconds
+//   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+//   return duration.count();
+// }
+
+// void test_bfs_on_subGraph(subGraph& G, commandLine& P) {
+//   long src = P.getOptionLongValue("-src",-1);
+//   if (src == -1) {
+//     std::cout << "Please specify a source vertex to run the BFS from" << std::endl;
+//     exit(0);
+//   }
+//   cout << "test bfs on subgraph" << endl;
+//   bitset<MAX_VERTEX_ID + 1> visitedBitMap;
+//   visitedBitMap.reset();
+//   queue<uint> q;
+//   q.push(src);
+//   visitedBitMap.set(src);
+//   vector<uint> neighbors;
+//   int visitedNodeNum = 1;
+//   int steps = 0;
+//   while (!q.empty()) {
+//     steps++;
+//     for (int i = q.size(); i > 0; i--) {
+//       uint id = q.front();
+//       //cout << "BFS visited id" << id << endl;
+//       q.pop();
+//       if(G.getAllNeighbors(id, neighbors)) {
+//         //cout << "Neighbors size" << neighbors.size() << endl;
+//         for (auto & neighbor : neighbors) {
+//           if (!visitedBitMap[neighbor]) {
+//             visitedBitMap.set(neighbor);
+//             q.push(neighbor);
+//             visitedNodeNum++;
+//             if (visitedNodeNum % 1000 == 0) {
+//               cout << "visitedNodeNum" << visitedNodeNum << endl;
+//             }
+//           }
+//         }
+//       }
       
-    }
-    cout << "steps:" << steps << " visitedNodeNum" << visitedNodeNum << endl;
-  }
-}
-
-long execute(commandLine& P, std::string testname, LSMTree *lsmtree) {
-  // Record the start time
-  auto startTime = std::chrono::high_resolution_clock::now();
-  if (testname == "BFS") {
-    test_bfs(P, lsmtree);
-  } else {
-    std::cout << "Unknown test: " << testname << ". Quitting." << std::endl;
-  }
-  // Record the end time
-  auto endTime = std::chrono::high_resolution_clock::now();
-  // Calculate the duration in microseconds
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-  return duration.count();
-}
-*/
+//     }
+//     cout << "steps:" << steps << " visitedNodeNum" << visitedNodeNum << endl;
+//   }
+// }
