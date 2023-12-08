@@ -204,11 +204,11 @@ public:
 
   LSMTree (string dirPath_) : dirPath (dirPath_) {
     cnt = 0;
-    edgeNumLimitOfLevels.reserve(MAX_LEVEL_NUM);
-    lsmtreeOnDiskData.reserve(MAX_LEVEL_NUM);
-    edgeNumLimitOfLevels[0] = LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE;
+    edgeNumLimitOfLevels.resize(MAX_LEVEL_NUM);
+    lsmtreeOnDiskData.resize(MAX_LEVEL_NUM);
+    edgeNumLimitOfLevels[0] = (LEVEL_0_CSR_FILE_NUM * MAX_EDGE_NUM_IN_MEMTABLE);
     for (int i = 1; i < MAX_LEVEL_NUM; i++) {
-      edgeNumLimitOfLevels[i] = MULTIPLE_BETWEEN_LEVEL * edgeNumLimitOfLevels[i - 1];
+      edgeNumLimitOfLevels[i] = (MULTIPLE_BETWEEN_LEVEL * edgeNumLimitOfLevels[i - 1]);
     }
   }
 
@@ -275,11 +275,11 @@ public:
       cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
             << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
-        //cout << "defore merge:" << endl;
-        //debugInfo();
+        cout << "defore merge:" << endl;
+        getFileSizeInEachLevel();
         implMerge(i, i+1);
         cout << "after merge:" << endl;
-        debugInfo();
+        getFileSizeInEachLevel();
       }
     }
   }
@@ -315,17 +315,20 @@ public:
     lsmtreeOnDiskData[levelb].pop_back();
     lsmtreeOnDiskData[levelb].push_back(fMerged);
 
-    //removeFile(fa.fileName);
-    //removeFile(fb.fileName);
+    removeFile(fa.fileName);
+    removeFile(fb.fileName);
     cout << "Merging CSR file: " << fa.fileName << " and " << fb.fileName \
       << "Merge res:" << fMerged.fileName << endl;
   }
 
-  void debugInfo() {
-    for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
+  void getFileSizeInEachLevel(void) {
+    cout << "lsmtreeOnDiskData.size():" << lsmtreeOnDiskData.size() << endl;
+    for (int i = 0; i < (int) lsmtreeOnDiskData.size(); ++i) {
       if (!lsmtreeOnDiskData[i].empty()) {
-        cout << "Files in level i:" << i << endl;
+        cout << "level:" << i << endl;
         lsmtreeOnDiskData[i].front().printDebugInfo();
+      } else {
+        cout << "level:" << i << "empty."<< endl;
       }
     }
   }

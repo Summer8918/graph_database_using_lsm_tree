@@ -65,6 +65,9 @@ int main(int argc, char** argv) {
         srcs.push_back(a);
         dests.push_back(b);
         edgeCnt++;
+        if (edgeCnt >= MAX_EDGE_NUM) {
+            break;
+        }
     }
     return 0;
 

@@ -1,7 +1,7 @@
 ifdef D
    CXXFLAGS=-Wall -std=c++11 -g -pg -DDEBUG
 else
-   CXXFLAGS=-Wall -std=c++11 -g -O3 
+   CXXFLAGS=-Wall -std=c++11 -g -O3 -fsanitize=address
 endif
 
 #CXXFLAGS=-Wall -std=c++11 -g -pg

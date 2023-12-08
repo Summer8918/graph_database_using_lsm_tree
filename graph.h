@@ -65,8 +65,8 @@ public:
     }
 
     uint addVertex(uint preId, uint vertexId, vector<uint> &neighbors) {
-        cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
-                neighbors.size() << " preId" << preId << endl;
+        // cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
+        //         neighbors.size() << " preId" << preId << endl;
         assert(preId <= vertexId);
         node n;
         n.id = vertexId;
@@ -89,10 +89,10 @@ public:
     int serializeVertexesHelper(vector<node> &data, int &pos, int blen, char *ptr) {
         int dlen = data.size();
         int sz = sizeof(data[pos]);
-        cout << "vertexes.size():" << vertexes.size() << endl;
+        // cout << "vertexes.size():" << vertexes.size() << endl;
         while(pos < dlen && blen < MAX_BUF_SIZE) {
             memcpy(ptr, &vertexes[pos], sz);
-            cout << "vertexes[pos].id" << data[pos].id << " od" << data[pos].outDegree << endl;
+            // cout << "vertexes[pos].id" << data[pos].id << " od" << data[pos].outDegree << endl;
             ptr += sz;
             pos++;
             blen += sz;
@@ -146,9 +146,9 @@ public:
     // not reach end, return true;
     bool readFileFromStart(node &vertex, vector<uint> &neighbors, string &fileName, 
             int vertex_num, int neighbors_num, uint minId, uint maxId) {
-                cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
-            "neighbors_num:" << neighbors_num  << " minId:" << minId << " maxId:" <<
-            maxId << endl;
+        // cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
+        //     "neighbors_num:" << neighbors_num  << " minId:" << minId << " maxId:" <<
+        //     maxId << endl;
         // read to the end
         if (vertexCnt >= vertex_num) {
             cout << "read to end" << endl;
@@ -165,9 +165,9 @@ public:
             vertexesPtr->seekg(v_read_bytes, std::ios::beg);
             vertexesPtr->read(buf, MAX_BUF_SIZE);
             int bytesRead = (int)vertexesPtr->gcount();
-            cout << "read_bytes:" << bytesRead << "vertexCnt" << vertexCnt << endl;
+            // cout << "read_bytes:" << bytesRead << "vertexCnt" << vertexCnt << endl;
             v_read_bytes += bytesRead;
-            cout << "v_read_bytes:" << v_read_bytes << endl;
+            // cout << "v_read_bytes:" << v_read_bytes << endl;
             int sz = sizeof(node);
             int len = vertex_num - vertexCnt;
             if (len > (int)MAX_BUF_SIZE / sz) {
@@ -176,7 +176,7 @@ public:
             vertexes.clear();  //caution!
             vertexes.reserve(len);
             char *ptr = buf;
-            cout << "len:" << len << endl;
+            // cout << "len:" << len << endl;
             node tmp_n;
             int cnt = 0;
             for (int i = 0; i < len; i++) {
@@ -185,9 +185,9 @@ public:
                 ptr += sz;
                 if (vertexes[i].id > maxId || vertexes[i].outDegree > neighbors_num ||
                         vertexes[i].id < minId) { // == 174232
-                    cout << "id: " << vertexes[i].id << " maxId:" << maxId \
-                        << " minId:" << minId << " outDegree:"
-                        << vertexes[i].outDegree << " neighbors_num:" << neighbors_num << endl;
+                    // cout << "id: " << vertexes[i].id << " maxId:" << maxId \
+                    //     << " minId:" << minId << " outDegree:"
+                    //     << vertexes[i].outDegree << " neighbors_num:" << neighbors_num << endl;
                     abort();
                 }
                 //cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
@@ -203,9 +203,9 @@ public:
         neighborsCnt = 0;
         do {
             if (posO == outNeighbors.size()) {
-                cout << "read outNeighbors from disk" << "neighborsCnt:" << neighborsCnt \
-                        << "posO" << posO << "outNeighbors.size()"  << outNeighbors.size()\
-                        << endl;
+                // cout << "read outNeighbors from disk" << "neighborsCnt:" << neighborsCnt \
+                //         << "posO" << posO << "outNeighbors.size()"  << outNeighbors.size()\
+                //         << endl;
                 string ofile = fileName + "o";
                 std::ifstream* neighborsPtr = new std::ifstream(ofile, std::ios::binary);
                 if (!neighborsPtr->is_open()) {
@@ -221,7 +221,7 @@ public:
                 if (len > (int)MAX_BUF_SIZE / sz) {
                     len = (int)MAX_BUF_SIZE / sz;
                 }
-                cout << "len:" << len << endl;
+                // cout << "len:" << len << endl;
                 outNeighbors.reserve(len);
                 char *ptr = buf;
                 for (int i = 0; i < len; i++) {
@@ -234,10 +234,10 @@ public:
                 neighborsPtr->close();
                 delete neighborsPtr;
             }
-            cout << "outdegree" << vertexes[posV].outDegree << endl;
-            cout << "neighborsCnt:" << neighborsCnt \
-                        << "posO" << posO << "outNeighbors.size()"  << outNeighbors.size()\
-                        << endl;
+            // cout << "outdegree" << vertexes[posV].outDegree << endl;
+            // cout << "neighborsCnt:" << neighborsCnt \
+            //             << "posO" << posO << "outNeighbors.size()"  << outNeighbors.size()\
+            //             << endl;
             while (posO < outNeighbors.size() && neighborsCnt < vertexes[posV].outDegree) {
                 neighbors.push_back(outNeighbors[posO++]);
                 neighborsCnt++;
@@ -247,12 +247,12 @@ public:
         vertex = vertexes[posV];
         vertexCnt++;
         posV++;
-        cout << "vertexes.size():" << vertexes.size() << " posV" << posV << endl;
-        cout << "outNeighbors.size()" << outNeighbors.size() << endl;
-        cout << " vertexCnt" << vertexCnt << " neighborsCnt" << neighborsCnt 
-                << " read_from_start_offset:" \
-                << read_from_start_offset << " neighbors.size()" 
-                << neighbors.size() << endl;
+        // cout << "vertexes.size():" << vertexes.size() << " posV" << posV << endl;
+        // cout << "outNeighbors.size()" << outNeighbors.size() << endl;
+        // cout << " vertexCnt" << vertexCnt << " neighborsCnt" << neighborsCnt 
+        //         << " read_from_start_offset:" \
+        //         << read_from_start_offset << " neighbors.size()" 
+        //         << neighbors.size() << endl;
         return true;
     }
 };

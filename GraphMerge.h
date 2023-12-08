@@ -28,6 +28,29 @@ struct FileMetaData {
     cout << "fileName:" << fileName << " minNodeId:" << minNodeId \
         << " maxNodeId:" << maxNodeId << " edgeNum:" << edgeNum \
         << " vertexNum:" << vertexNum << endl;
+    std::ifstream file(fileName + "v", std::ios::binary | std::ios::ate);
+    // Check if the file is open
+    if (!file.is_open()) {
+        std::cerr << "Failed to open the vertexes file." << std::endl;
+        return;
+    }
+
+    std::streampos fileSize = file.tellg();
+
+    std::cout << "Vertexes File size: " << fileSize / (1024) << " kB" << std::endl;
+    file.close();
+
+    std::ifstream neighborFile(fileName + "o", std::ios::binary | std::ios::ate);
+    // Check if the file is open
+    if (!neighborFile.is_open()) {
+        std::cerr << "Failed to open the neighbors file." << std::endl;
+        return;
+    }
+
+    fileSize = neighborFile.tellg();
+
+    std::cout << "Neighbor File size: " << fileSize / (1024) << " kB" << std::endl;
+    file.close();
   }
 };
 
@@ -72,8 +95,8 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
         cout << "na id:" << na.id << " nb id:" << nb.id << endl;
         if (na.id == nb.id) {
             unordered_set<uint> neighborsSet(neighborsA.begin(), neighborsA.end());
-            cout << "neighborsA.size()" << neighborsA.size() << endl;
-            cout << "neighborsB.size()" << neighborsB.size() << endl;
+            // cout << "neighborsA.size()" << neighborsA.size() << endl;
+            // cout << "neighborsB.size()" << neighborsB.size() << endl;
             std::vector<uint> mergedNeighbors = neighborsA;
             for (auto & b : neighborsB) {
                 if (neighborsSet.count(b) == 0) {
@@ -116,7 +139,7 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
             edgeNum = 0;
         }
         fM.vertexNum++;
-        cout << "edgeNum:" << edgeNum << endl;
+        // cout << "edgeNum:" << edgeNum << endl;
     }
 
     while (graph_a_flag) {
