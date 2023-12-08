@@ -322,7 +322,7 @@ public:
       for (auto &f : level) {
         TotalEdgeNum += f.edgeNum;
       }
-      //cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]" \
+      // cout << "TotalEdgeNum:" << TotalEdgeNum << "edgeNumLimitOfLevels[i]"
       //      << "i: " << i << " " << edgeNumLimitOfLevels[i] << endl;
       if (TotalEdgeNum >= edgeNumLimitOfLevels[i]) {
         // cout << "defore merge:" << endl;
@@ -411,7 +411,7 @@ public:
   // }
 
   void getFileSizeInEachLevel(void) {
-    for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
+    for (int i = 0; i < (int) lsmtreeOnDiskData.size(); ++i) {
       if (!lsmtreeOnDiskData[i].empty()) {
         cout << "level:" << i << endl;
         lsmtreeOnDiskData[i].front().printDebugInfo();
@@ -419,9 +419,9 @@ public:
     }
   }
 
-  void nghbr_from_both(int cur) {
+  // void nghbr_from_both(int cur) {
 
-  }
+  // }
 
   void new_bfs(uint src) {
     cout << "test bfs in LSM-tree" << endl;
@@ -458,7 +458,7 @@ public:
       cout << "Done searching memtable" << endl;
 #endif
       // Traverse graph in each level of LSM-tree
-      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+      for (int i = 0; i < (int) lsmtreeOnDiskData.size(); i++) {
         if (lsmtreeOnDiskData[i].empty()) {
 #ifdef ENABLE_DEBUG
           cout << "skip bfs on level:" << i << endl;
@@ -529,7 +529,7 @@ public:
 #endif
 
       // Traverse graph in each level of LSM-tree
-      for (int i = 0; i < lsmtreeOnDiskData.size(); i++) {
+      for (int i = 0; i < (int)lsmtreeOnDiskData.size(); i++) {
         if (lsmtreeOnDiskData[i].empty()) {
 #ifdef ENABLE_DEBUG
           cout << "skip bfs on level:" << i << endl;

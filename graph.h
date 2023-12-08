@@ -185,7 +185,7 @@ public:
         filePtr->read(buf1, sizeof(graphHeader));
         // std::cout << "Deserialize file length:" << len << endl;
         // Get the number of bytes read
-        std::streamsize bytesRead = filePtr->gcount();
+        // std::streamsize bytesRead = filePtr->gcount();
 
         //std::cout << "Read " << bytesRead << " bytes." << std::endl;
         
@@ -196,14 +196,14 @@ public:
         outNeighbors.resize(header.outNeighborNum);
         len -= sizeof(graphHeader);
         int vertexIdx = 0, outNeighIdx = 0;
-        int plen;
+        // int plen;
         while (len > 0) {
             // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
             // int bytesRead = (int)filePtr->gcount();
             // filePtr->read(buf1, plen);
             filePtr->read(buf1, MAX_BUF_SIZE);
             char *ptr1 = buf1;
-            char *ptr2 = buf2;
+            // char *ptr2 = buf2;
             // Get the number of bytes read
             int bytesRead = (int)filePtr->gcount();
             len -= bytesRead;
@@ -271,7 +271,7 @@ public:
         filePtr->read(buf1, sizeof(graphHeader));
         // std::cout << "Deserialize file length:" << len << endl;
         // Get the number of bytes read
-        std::streamsize bytesRead = filePtr->gcount();
+        // std::streamsize bytesRead = filePtr->gcount();
 
         //std::cout << "Read " << bytesRead << " bytes." << std::endl;
         
@@ -280,15 +280,16 @@ public:
         // cout << "In deserialize outNeighborsSize:" << header.outNeighborNum << endl;
         vertexes.resize(header.vertexNum);
         len -= sizeof(graphHeader);
-        int vertexIdx = 0, outNeighIdx = 0;
-        int plen;
+        int vertexIdx = 0;
+        // int outNeighIdx = 0;
+        // int plen;
         while (len > 0) {
             // filePtr->read(reinterpret_cast<char*>(&plen), sizeof(int));
             // int bytesRead = (int)filePtr->gcount();
             // filePtr->read(buf1, plen);
             filePtr->read(buf1, MAX_BUF_SIZE);
             char *ptr1 = buf1;
-            char *ptr2 = buf2;
+            // char *ptr2 = buf2;
             // Get the number of bytes read
             int bytesRead = (int)filePtr->gcount();
             len -= bytesRead;

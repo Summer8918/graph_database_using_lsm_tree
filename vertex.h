@@ -1,90 +1,90 @@
-#ifndef VERTEX_H
-#define VERTEX_H
+// #ifndef VERTEX_H
+// #define VERTEX_H
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include "utils.h"
+// #include <iostream>
+// #include <string>
+// #include <vector>
+// #include <algorithm>
+// #include <cmath>
+// #include "utils.h"
 
-using namespace std;
+// using namespace std;
 
 
 
-// Suppose the graph is unweighted, asymmetric and directional.
-struct asymmetricVertex {
-    uintE* inNeighbors;
-    uintE* outNeighbors;
-    uintT outDegree;
-    uintT inDegree;
+// // Suppose the graph is unweighted, asymmetric and directional.
+// struct asymmetricVertex {
+//     uintE* inNeighbors;
+//     uintE* outNeighbors;
+//     uintT outDegree;
+//     uintT inDegree;
 
-    asymmetricVertex(uintE *iN, uintE *oN, uintT id, uintT od)
-        : inNeighbors(iN),
-          outNeighbors(oN),
-          inDegree(id),
-          outDegree(od) {}
+//     asymmetricVertex(uintE *iN, uintE *oN, uintT id, uintT od)
+//         : inNeighbors(iN),
+//           outNeighbors(oN),
+//           inDegree(id),
+//           outDegree(od) {}
     
-    uintE* getInNeighbors () {
-        return inNeighbors;
-    }
+//     uintE* getInNeighbors () {
+//         return inNeighbors;
+//     }
 
-    const uintE* getInNeighbors () const {
-        return inNeighbors;
-    }
+//     const uintE* getInNeighbors () const {
+//         return inNeighbors;
+//     }
 
-    uintE* getOutNeighbors () {
-        return outNeighbors;
-    }
+//     uintE* getOutNeighbors () {
+//         return outNeighbors;
+//     }
 
-    const uintE* getOutNeighbors () const {
-        return outNeighbors;
-    }
+//     const uintE* getOutNeighbors () const {
+//         return outNeighbors;
+//     }
     
-    uintE getInNeighbor(uintT j) const {
-        return inNeighbors[j];
-    }
+//     uintE getInNeighbor(uintT j) const {
+//         return inNeighbors[j];
+//     }
 
-    uintE getOutNeighbor(uintT j) const {
-        return outNeighbors[j];
-    }
+//     uintE getOutNeighbor(uintT j) const {
+//         return outNeighbors[j];
+//     }
 
-    void setInNeighbor(uintT j, uintE ngh) {
-        inNeighbors[j] = ngh;
-    }
+//     void setInNeighbor(uintT j, uintE ngh) {
+//         inNeighbors[j] = ngh;
+//     }
 
-    void setOutNeighbor(uintT j, uintE ngh) {
-        outNeighbors[j] = ngh;
-    }
+//     void setOutNeighbor(uintT j, uintE ngh) {
+//         outNeighbors[j] = ngh;
+//     }
 
-    void setInNeighbors(uintE* _i) {
-        inNeighbors = _i;
-    }
+//     void setInNeighbors(uintE* _i) {
+//         inNeighbors = _i;
+//     }
 
-    void setOutNeighbors(uintE* _i) {
-        outNeighbors = _i;
-    }
+//     void setOutNeighbors(uintE* _i) {
+//         outNeighbors = _i;
+//     }
 
-    uintT getInDegree() const {
-        return inDegree;
-    }
+//     uintT getInDegree() const {
+//         return inDegree;
+//     }
 
-    uintT getOutDegree() const {
-        return outDegree;
-    }
+//     uintT getOutDegree() const {
+//         return outDegree;
+//     }
 
-    void setInDegree(uintT _d) {
-        inDegree = _d;
-    }
+//     void setInDegree(uintT _d) {
+//         inDegree = _d;
+//     }
 
-    void setOutDegree(uintT _d) {
-        outDegree = _d;
-    }
+//     void setOutDegree(uintT _d) {
+//         outDegree = _d;
+//     }
 
-    void flipEdges() {
-        swap(inNeighbors,outNeighbors);
-        swap(inDegree,outDegree); 
-    }
-};
+//     void flipEdges() {
+//         swap(inNeighbors,outNeighbors);
+//         swap(inDegree,outDegree); 
+//     }
+// };
 
-#endif
+// #endif
