@@ -65,14 +65,14 @@ public:
     }
 
     uint addVertex(uint preId, uint vertexId, vector<uint> &neighbors) {
+        cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
+                neighbors.size() << " preId" << preId << endl;
         assert(preId <= vertexId);
         node n;
         n.id = vertexId;
         n.outDegree = neighbors.size();
         n.offset = off;
         off += neighbors.size();
-        cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
-                neighbors.size() << endl;
         vertexes.push_back(n);
         /*
         cout << "In addVertex vertexes.size():" << vertexes.size() << endl;
@@ -147,7 +147,8 @@ public:
     bool readFileFromStart(node &vertex, vector<uint> &neighbors, string &fileName, 
             int vertex_num, int neighbors_num, uint minId, uint maxId) {
                 cout << "read file:" << fileName << " vertex_num:" << vertex_num << 
-            "neighbors_num:" << neighbors_num << endl;
+            "neighbors_num:" << neighbors_num  << " minId:" << minId << " maxId:" <<
+            maxId << endl;
         // read to the end
         if (vertexCnt >= vertex_num) {
             cout << "read to end" << endl;
@@ -164,12 +165,15 @@ public:
             vertexesPtr->seekg(v_read_bytes, std::ios::beg);
             vertexesPtr->read(buf, MAX_BUF_SIZE);
             int bytesRead = (int)vertexesPtr->gcount();
+            cout << "read_bytes:" << bytesRead << "vertexCnt" << vertexCnt << endl;
             v_read_bytes += bytesRead;
+            cout << "v_read_bytes:" << v_read_bytes << endl;
             int sz = sizeof(node);
             int len = vertex_num - vertexCnt;
             if (len > (int)MAX_BUF_SIZE / sz) {
                 len = (int)MAX_BUF_SIZE / sz;
             }
+            vertexes.clear();  //caution!
             vertexes.reserve(len);
             char *ptr = buf;
             cout << "len:" << len << endl;
@@ -186,7 +190,7 @@ public:
                         << vertexes[i].outDegree << " neighbors_num:" << neighbors_num << endl;
                     abort();
                 }
-                cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
+                //cout << "od:" << vertexes[i].outDegree << "id:" << vertexes[i].id << endl;
                 cnt++;
             }
             cout << "cnt:" << cnt << endl;
