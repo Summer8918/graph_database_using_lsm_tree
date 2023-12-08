@@ -587,6 +587,60 @@ public:
   }
 };
 
+
+// Draft of constant running BFS using the CSR structure itself
+// void const_bfs(subGraph& G, uint src) {
+//     cout << "Running const_bfs from source = " << src << endl;
+
+//     bitset<MAX_VERTEX_ID + 1> visited;
+//     queue<uint> q;
+
+//     // Start BFS from the source node
+//     q.push(src);
+//     visited.set(src);
+
+//     int visitedNodes = 0; // Count the number of visited nodes for debugging
+
+//     while (!q.empty()) {
+//         uint current = q.front();
+//         q.pop();
+//         visitedNodes++;
+
+//         #ifdef ENABLE_DEBUG
+//         cout << "Visiting node: " << current << endl;
+//         #endif
+
+//         // Find the index of the current vertex in the CSR structure
+//         int index = G.search(current);
+//         if (index != -1) {
+//             // Get the neighbors of the current vertex
+//             int startIdx = G.vertexes[index].offset;
+//             int numNeighbors = G.vertexes[index].outDegree;
+
+//             #ifdef ENABLE_DEBUG
+//             cout << "Node " << current << " has " << numNeighbors << " neighbors." << endl;
+//             #endif
+
+//             for (int i = 0; i < numNeighbors; ++i) {
+//                 uint neighbor = G.outNeighbors[startIdx + i];
+//                 if (!visited[neighbor]) {
+//                     visited.set(neighbor);
+//                     q.push(neighbor);
+
+//                     #ifdef ENABLE_DEBUG
+//                     cout << "Visiting neighbor: " << neighbor << " of node: " << current << endl;
+//                     #endif
+//                 }
+//             }
+//         }
+//     }
+
+//     #ifdef ENABLE_DEBUG
+//     cout << "Total nodes visited: " << visitedNodes << endl;
+//     #endif
+// }
+
+
 void test_bfs_on_lsm_tree(LSMTree *lsmtree, commandLine& P) {
 /*
 Concern: implement BFS on lsm-tree is very complex, as for each node,
