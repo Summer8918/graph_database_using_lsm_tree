@@ -334,7 +334,22 @@ public:
     }
   }
 
-  // void bfs(uint src) {
+  void mergeAllLevels() {
+    // heap + external merge sort
+  }
+
+  void ConvertCSRFileIntoGraphInMemory() {
+
+  }
+
+  void bfsOnGraphInMemory() {
+
+  }
+
+  void implBfs(uint src) {
+    mergeAllLevels();
+    ConvertCSRFileIntoGraphInMemory();
+    bfsOnGraphInMemory();
   //   cout << "test bfs in LSM-tree" << endl;
   //   bitset<MAX_VERTEX_ID + 1> visitedBitMap;
   //   visitedBitMap.reset();
@@ -392,7 +407,7 @@ public:
   //     }
   //     cout << "steps:" << steps << " visitedNodes" << visitedNodes << endl;
   //   }
-  // }
+  }
 };
 
 
