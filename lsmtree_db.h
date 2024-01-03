@@ -228,7 +228,7 @@ public:
       cout << "memt is empty, no need to convert to csr" << endl;
       return;
     }
-    // cout << "convertToCSR" << endl;
+    cout << "convertToCSR" << endl;
     Graph *graph = new Graph(0);
     int sz = memt.memTable.size();
     uint64_t offset = 0;
@@ -309,7 +309,8 @@ public:
     FileMetaData fMerged;
     fMerged.fileName = getFileName();
 
-    externalMergeSort(fa, fb, fMerged); // Merge operation
+    
+    externalMergeSort2(fa, fb, fMerged); // Merge operation
 
     // Clear the files from the lower level after merging
     levelAFiles.clear();
@@ -336,6 +337,9 @@ public:
 
   void mergeAllLevels() {
     // heap + external merge sort
+    FileMetaData fMerged;
+    fMerged.fileName = getFileName();
+    multipleExternalMergeSort(lsmtreeOnDiskData, fMerged);
   }
 
   void ConvertCSRFileIntoGraphInMemory() {

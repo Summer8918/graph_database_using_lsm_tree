@@ -65,8 +65,10 @@ public:
     }
 
     uint addVertex(uint preId, uint vertexId, vector<uint> &neighbors) {
-        // cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
-        //         neighbors.size() << " preId" << preId << endl;
+        if (preId > vertexId) {
+            cout << "In addVertex vertexId:" << vertexId << " neighbors size:" <<
+                neighbors.size() << " preId" << preId << endl;
+        }
         assert(preId <= vertexId);
         node n;
         n.id = vertexId;

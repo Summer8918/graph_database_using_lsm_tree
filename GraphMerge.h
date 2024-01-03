@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_set>
-#include <omp.h>
+#include <queue>
 
 struct FileMetaData {
   FileMetaData() {
@@ -195,148 +195,82 @@ void externalMergeSort(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
     delete gOutput;
 }
 
-/*
-// Function to convert adjacency list graph to CSR graph
-subGraph convertToCSR(const DiaGraph& adjListGraph) {
-    subGraph csrGraph;
-    // Assuming the node ids are 0...N-1
-    csrGraph.vertexes.resize(adjListGraph.N);
-    csrGraph.outNeighbors.reserve(adjListGraph.N); // Reserve enough space
+struct pqElement {
+    Graph *graph;
+    node n;
+    FileMetaData file;
+    vector<uint> *neighbors;
+    void clearElement(void) {
+        delete graph;
+        delete neighbors;
+    }
+    ~pqElement() {
+        clearElement();
+    }
+};
 
-    for (int i = 0; i < adjListGraph.N; ++i) {
-        adjNode* current = adjListGraph.head[i];
-        csrGraph.vertexes[i].id = i;
-        csrGraph.vertexes[i].offset = csrGraph.outNeighbors.size();
-        
-        while (current != nullptr) {
-            csrGraph.outNeighbors.push_back(current->val);
-            current = current->next;
+struct myCmp{
+    bool operator()(pqElement* const a, pqElement* const b) {
+        return a->n.id > b->n.id;
+    }
+};
+
+void multipleExternalMergeSort(std::vector<std::vector<FileMetaData>> &lsmtreeOnDiskData, \
+        FileMetaData &fM) {
+    priority_queue<pqElement*, vector<pqElement*>, myCmp> pq;
+    for (int i = 0; i < lsmtreeOnDiskData.size(); ++i) {
+        for (int j = 0; j < lsmtreeOnDiskData[i].size(); j++) {
+            pqElement * tmp = new pqElement();
+            tmp->graph = new Graph(0);
+            tmp->file = lsmtreeOnDiskData[i][j];
+            cout << "debug info:" << endl;
+            lsmtreeOnDiskData[i][j].printDebugInfo();
+            tmp->neighbors = new vector<uint>();
+            bool flag = tmp->graph->readFileFromStart(tmp->n, *(tmp->neighbors), tmp->file.fileName, 
+                    tmp->file.vertexNum, tmp->file.edgeNum, tmp->file.minNodeId, tmp->file.maxNodeId);
+            if (flag) {
+                pq.push(tmp);
+            } else {
+                delete tmp;
+            }
         }
-        
-        csrGraph.vertexes[i].outDegree = csrGraph.outNeighbors.size() - csrGraph.vertexes[i].offset;
     }
-    // Update totalLen and other necessary fields for csrGraph
-    csrGraph.header.vertexNum = csrGraph.vertexes.size();
-    csrGraph.header.outNeighborNum = csrGraph.outNeighbors.size();
+    cout << "pq.size()" << pq.size() << endl;
+    fM.minNodeId = pq.top()->n.id;
+    Graph *gOutput = new Graph(0);
+    uint preId = 0;
+    while (!pq.empty()) {
+        pqElement * top = pq.top();
+        if (preId > top->n.id) {
+            cout << "addVertex preId:" << preId << "top->n.id" << top->n.id << endl;
+        }
+        gOutput->addVertex(preId, top->n.id, *(top->neighbors));
+        preId = top->n.id;
 
-    return csrGraph;
-}
-
-void debugInfo(node &a, vector<uint> n) {
-    cout << "id:" << a.id << " neighbors:" << endl;
-    for (int i = 0; i < n.size(); i++) {
-        cout << n[i] << " ";
-    }
-    cout << endl;
-}
-*/
-
-/*
-// Merge function for two CSR graphs that handles overlapping vertices
-subGraph* mergeGraphs(const subGraph& G1, const subGraph& G2) {
-    subGraph *newGraph = new subGraph;
-    newGraph->vertexes.reserve(G1.vertexes.size() + G2.vertexes.size());
-    newGraph->outNeighbors.reserve(G1.outNeighbors.size() + G2.outNeighbors.size());
-
-    std::unordered_map<uintT, size_t> vertexMapping;
-    for (const auto& v : G1.vertexes) {
-        newGraph->vertexes.push_back(v);
-        vertexMapping[v.id] = newGraph->vertexes.size() - 1;
-        newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), \
-            G1.outNeighbors.begin() + v.offset, \
-            G1.outNeighbors.begin() + v.offset + v.outDegree);
-    }
-
-    // Parallelize the merging of vertices from G2
-    #pragma omp parallel for
-    for (size_t i = 0; i < G2.vertexes.size(); ++i) {
-        const auto& v = G2.vertexes[i];
-        auto it = vertexMapping.find(v.id);
-        if (it != vertexMapping.end()) {
-            // Handle overlapping vertices
-            node& existingNode = newGraph->vertexes[it->second];
-            size_t newOffset = newGraph->outNeighbors.size();
-            std::vector<uintT> tempNeighbors;
-            tempNeighbors.reserve(v.outDegree);
-            for (size_t j = 0; j < v.outDegree; ++j) {
-                uintT neighbor = G2.outNeighbors[v.offset + j];
-                tempNeighbors.push_back(neighbor);
-            }
-            #pragma omp critical
-            {
-                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
-                existingNode.outDegree += tempNeighbors.size();
-                if (existingNode.outDegree > 0) {
-                    existingNode.offset = newOffset;
-                }
-            }
+        pq.pop();
+        fM.edgeNum += top->neighbors->size();
+        bool flag = top->graph->readFileFromStart(top->n, *(top->neighbors), top->file.fileName,
+                    top->file.vertexNum, top->file.edgeNum, top->file.minNodeId,
+                    top->file.maxNodeId);
+        fM.vertexNum++;
+        if (flag) {
+            pq.push(top);
         } else {
-            // Handle unique vertices
-            node newNode = v;
-            newNode.offset = newGraph->outNeighbors.size();
-            std::vector<uintT> tempNeighbors(G2.outNeighbors.begin() + v.offset, G2.outNeighbors.begin() + v.offset + v.outDegree);
-            #pragma omp critical
-            {
-                newGraph->vertexes.push_back(newNode);
-                vertexMapping[v.id] = newGraph->vertexes.size() - 1;
-                newGraph->outNeighbors.insert(newGraph->outNeighbors.end(), tempNeighbors.begin(), tempNeighbors.end());
-            }
+            delete top;
         }
     }
-
-    //newGraph.totalLen = newGraph.vertexes.size() * sizeof(node) + newGraph.outNeighbors.size() * sizeof(uintT);
-    newGraph->header.vertexNum = newGraph->vertexes.size();
-    newGraph->header.outNeighborNum = newGraph->outNeighbors.size();
-    newGraph->edgeNum = newGraph->header.outNeighborNum;
-    return newGraph;
+    fM.maxNodeId = preId;
+    gOutput->flushToDisk(fM.fileName);
+    delete gOutput;
 }
 
-// Utility function to print CSR graph
-void printCSRGraph(const subGraph& csrGraph) {
-    cout << "CSR Graph:" << endl;
-    cout << "Vertexes (id, offset, outDegree):" << endl;
-    for (const node& n : csrGraph.vertexes) {
-        cout << "(" << n.id << ", " << n.offset << ", " << n.outDegree << ") ";
-    }
-    cout << "\nOutNeighbors:" << endl;
-    for (unsigned int n : csrGraph.outNeighbors) {
-        cout << n << " ";
-    }
-    //cout << "\nTotal Length: " << csrGraph.totalLen << endl;
+void externalMergeSort2(FileMetaData &fA, FileMetaData &fB, FileMetaData &fM) {
+    std::vector<std::vector<FileMetaData>> tmp;
+    std::vector<FileMetaData> tmp2;
+    tmp2.push_back(fA);
+    tmp2.push_back(fB);
+    tmp.push_back(tmp2);
+    multipleExternalMergeSort(tmp, fM);
 }
 
-// // Test function for GraphMerge.h
-// int main() {
-//     // Graph edges array.
-//     graphEdge edges[] = {
-//         // (x, y, w) -> edge from x to y with weight w
-//         {0, 1, 2}, {0, 2, 4}, {1, 4, 3}, {2, 3, 2}, {3, 1, 4}, {4, 3, 3}
-//     };
-//     int numVertices = 6;  // Number of vertices in the graph
-//     int numEdges = sizeof(edges) / sizeof(edges[0]);
-
-//     // Construct graph
-//     DiaGraph diaGraph(edges, numEdges, numVertices);
-
-//     // Convert to CSR format
-//     subGraph csrGraph = convertToCSR(diaGraph);
-//     printCSRGraph(csrGraph);
-
-//     // Merge CSR graph with itself and print the result
-//     subGraph mergedGraph = mergeGraphs(csrGraph, csrGraph);
-//     printCSRGraph(mergedGraph);
-
-//     // Check for correctness
-//     bool correct = true;
-//     for (size_t i = 0; i < csrGraph.vertexes.size(); ++i) {
-//         if (mergedGraph.vertexes[i].outDegree != 2 * csrGraph.vertexes[i].outDegree) {
-//             correct = false;
-//             break;
-//         }
-//     }
-//     cout << "Merge correctness: " << (correct ? "Passed" : "Failed") << endl;
-
-//     return 0;
-// }
-*/
 #endif  // GRAPHMERGE_H
