@@ -228,7 +228,7 @@ public:
       cout << "memt is empty, no need to convert to csr" << endl;
       return;
     }
-    cout << "convertToCSR" << endl;
+
     Graph *graph = new Graph(0);
     int sz = memt.memTable.size();
     uint64_t offset = 0;
@@ -256,7 +256,8 @@ public:
     file.vertexNum = sz;
     assert(lsmtreeOnDiskData[0].empty());
     lsmtreeOnDiskData[0].push_back(file);
-    // file.printDebugInfo();
+    cout << "convertToCSR, CSR file info:" << endl;
+    file.printDebugInfo();
     memt.clearMemT();
 
     delete graph;

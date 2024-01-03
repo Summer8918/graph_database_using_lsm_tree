@@ -223,7 +223,7 @@ void multipleExternalMergeSort(std::vector<std::vector<FileMetaData>> &lsmtreeOn
             pqElement * tmp = new pqElement();
             tmp->graph = new Graph(0);
             tmp->file = lsmtreeOnDiskData[i][j];
-            cout << "debug info:" << endl;
+            cout << "debug info in multipleExternalMergeSort:" << endl;
             lsmtreeOnDiskData[i][j].printDebugInfo();
             tmp->neighbors = new vector<uint>();
             bool flag = tmp->graph->readFileFromStart(tmp->n, *(tmp->neighbors), tmp->file.fileName, 
@@ -261,6 +261,8 @@ void multipleExternalMergeSort(std::vector<std::vector<FileMetaData>> &lsmtreeOn
     }
     fM.maxNodeId = preId;
     gOutput->flushToDisk(fM.fileName);
+    cout << "debug info in multipleExternalMergeSort, merged file info:" << endl;
+    fM.printDebugInfo();
     delete gOutput;
 }
 

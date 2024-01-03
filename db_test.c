@@ -54,10 +54,12 @@ int main(int argc, char** argv) {
 
     // add edges in batch
     auto perm = get_random_permutation(edgeCnt);
-    cout << "add edges in batch" << endl;
+    cout << "add edges in batch, edgeCnt:" << edgeCnt << endl;
     startTime = std::chrono::high_resolution_clock::now();
     for (uint64_t i = 0; i < edgeCnt; i++) {
         auto idx = perm[i];
+        a = srcs[idx];
+        b = dests[idx];
         lsmtree->addEdge(a, b);
     }
     endTime = std::chrono::high_resolution_clock::now();
